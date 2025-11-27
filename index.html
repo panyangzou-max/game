@@ -3,151 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PROJECT_QI // PARTICLE_LOG</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <title>PROJECT_QI // NEON_HORIZON</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=VT323&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #050505;
-            --crt-blue: #00f3ff;
-            --crt-amber: #ffb000;
-            --crt-red: #ff003c;
-            --glass-bg: rgba(10, 15, 20, 0.6);
+            --bg-deep: #050505;
+            --neon-cyan: #00f3ff;
+            --neon-pink: #ff0055;
+            --neon-gold: #ffcc00;
+            --neon-green: #00ff66;
+            --glass: rgba(10, 20, 30, 0.6);
         }
 
         * { box-sizing: border-box; user-select: none; cursor: crosshair; }
 
         body {
-            margin: 0;
-            background-color: #000;
-            height: 100vh;
-            overflow: hidden;
-            font-family: 'Share Tech Mono', monospace;
-            color: var(--crt-blue);
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            margin: 0; background: #000; height: 100vh; overflow: hidden;
+            font-family: 'VT323', monospace; color: var(--neon-cyan);
+            display: flex; justify-content: center; align-items: center;
         }
 
-        /* --- CRT 屏幕特效容器 --- */
-        #crt-frame {
-            position: relative;
-            width: 100vw; height: 100vh;
-            background: radial-gradient(circle at center, #111 0%, #000 120%);
-            overflow: hidden;
-        }
-
-        /* 扫描线滤镜 */
-        #crt-frame::before {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+        /* --- CRT 屏幕滤镜 (磁带未来主义核心) --- */
+        #crt-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 999;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
                         linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 2px, 3px 100%;
-            pointer-events: none;
-            z-index: 999;
-            opacity: 0.8;
+            background-size: 100% 3px, 6px 100%;
+            animation: flicker 0.15s infinite;
         }
+        @keyframes flicker { 0% { opacity: 0.95; } 50% { opacity: 0.9; } 100% { opacity: 0.95; } }
 
-        /* 屏幕微光 */
-        #crt-frame::after {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: radial-gradient(circle, rgba(0,243,255,0) 50%, rgba(0,243,255,0.05) 100%);
-            pointer-events: none;
-            z-index: 999;
-        }
-
+        /* 游戏画布 */
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         
-        /* UI 层 */
+        /* UI 布局 */
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 100; pointer-events: none;
-            padding: 20px;
+            z-index: 100; pointer-events: none; padding: 25px;
         }
 
-        /* 磁带未来主义 UI 组件 */
+        /* 玻璃拟态面板 */
         .panel {
-            position: absolute;
-            pointer-events: auto;
-            background: var(--glass-bg);
-            border: 1px solid rgba(0, 243, 255, 0.2);
-            backdrop-filter: blur(4px);
-            padding: 15px;
-            box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
-            transition: all 0.3s ease;
+            position: absolute; pointer-events: auto;
+            background: var(--glass);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.1), inset 0 0 20px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            padding: 15px; transform: skewX(-5deg); /* 倾斜设计 */
         }
-        .panel:hover { border-color: var(--crt-blue); box-shadow: 0 0 25px rgba(0, 243, 255, 0.2); }
 
-        .top-left { top: 20px; left: 20px; width: 200px; }
-        .top-center { top: 20px; left: 50%; transform: translateX(-50%); text-align: center; border: none; background: transparent; box-shadow: none;}
-        .right-menu { top: 50%; right: 20px; transform: translateY(-50%); width: 300px; display: flex; flex-direction: column; gap: 10px; }
+        .top-left { top: 20px; left: 20px; min-width: 220px; }
+        .top-center { 
+            top: 20px; left: 50%; transform: translateX(-50%) skewX(-5deg);
+            text-align: center; border-bottom: 3px solid var(--neon-pink);
+        }
+        .right-menu { 
+            top: 50%; right: 20px; transform: translateY(-50%); 
+            width: 300px; display: flex; flex-direction: column; gap: 12px; 
+            max-height: 80vh; overflow-y: auto;
+        }
+        /* 隐藏滚动条 */
+        .right-menu::-webkit-scrollbar { width: 0; }
 
-        /* 字体排版 */
-        h1, h2, h3 { margin: 0; font-weight: normal; text-transform: uppercase; letter-spacing: 2px; }
-        .label { font-size: 10px; color: #666; margin-bottom: 2px; }
-        .val { font-size: 24px; font-family: 'Orbitron', sans-serif; text-shadow: 0 0 10px currentColor; }
-        .cyan { color: var(--crt-blue); }
-        .red { color: var(--crt-red); }
+        /* 字体与数值 */
+        h2 { margin: 0 0 10px 0; font-family: 'Orbitron'; font-size: 16px; letter-spacing: 2px; color: #fff; border-bottom: 1px dashed #444; padding-bottom: 5px; }
+        .label { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .val { font-size: 32px; font-weight: bold; text-shadow: 0 0 10px currentColor; line-height: 1; }
+        .cyan { color: var(--neon-cyan); }
+        .pink { color: var(--neon-pink); }
+
+        /* 血条 */
+        .hp-bar { width: 400px; height: 8px; background: #222; margin-top: 5px; position: relative; overflow: hidden; }
+        .hp-fill { height: 100%; width: 100%; background: var(--neon-pink); box-shadow: 0 0 15px var(--neon-pink); transition: width 0.3s; }
+
+        /* 升级卡片 */
+        .card {
+            background: rgba(0,0,0,0.5); border: 1px solid #444;
+            padding: 10px; cursor: pointer; transition: 0.2s; position: relative;
+        }
+        .card:hover:not(.disabled) { background: rgba(0, 243, 255, 0.1); border-color: var(--neon-cyan); transform: scale(1.02); }
+        .card.disabled { opacity: 0.4; filter: grayscale(1); cursor: not-allowed; }
         
-        /* 进度条 */
-        .bar-frame { width: 100%; height: 6px; background: #222; border: 1px solid #444; margin-top: 5px; }
-        .bar-fill { height: 100%; width: 100%; background: var(--crt-red); box-shadow: 0 0 10px var(--crt-red); transition: width 0.2s; }
-
-        /* 升级按钮 */
-        .btn-upgrade {
-            background: rgba(0,0,0,0.6);
-            border: 1px solid #333;
-            color: #888;
-            padding: 12px;
-            cursor: pointer;
-            display: flex; justify-content: space-between; align-items: center;
-            font-family: 'Share Tech Mono', monospace;
-            transition: 0.2s;
-        }
-        .btn-upgrade:hover:not(.disabled) {
-            background: rgba(0, 243, 255, 0.1);
-            border-color: var(--crt-blue);
-            color: #fff;
-            padding-left: 18px;
-        }
-        .btn-upgrade.disabled { opacity: 0.5; cursor: not-allowed; border-style: dashed; }
-        
-        .cost-tag { color: var(--crt-amber); font-weight: bold; }
+        .c-head { display: flex; justify-content: space-between; font-family: 'Orbitron'; color: #fff; font-size: 14px; margin-bottom: 4px; }
+        .c-lvl { background: var(--neon-cyan); color: #000; padding: 0 4px; font-weight: bold; font-size: 12px; }
+        .c-desc { font-size: 14px; color: #aaa; }
+        .c-cost { text-align: right; color: var(--neon-gold); font-weight: bold; font-size: 16px; margin-top: 5px; }
 
         /* 启动画面 */
-        #boot-screen {
-            position: absolute; top:0; left:0; width:100%; height:100%;
+        #boot {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; z-index: 2000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            pointer-events: auto;
         }
-        .glitch-text {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 60px;
-            color: #fff;
-            text-shadow: 2px 2px var(--crt-red), -2px -2px var(--crt-blue);
-            animation: glitch 1s infinite alternate;
+        .glitch-title {
+            font-family: 'Orbitron'; font-size: 72px; color: #fff;
+            text-shadow: 4px 0 var(--neon-pink), -4px 0 var(--neon-cyan);
+            animation: glitch-anim 2s infinite steps(2, start);
         }
-        @keyframes glitch { 0% { transform: skew(0deg); } 20% { transform: skew(-2deg); } 40% { transform: skew(2deg); } 100% { transform: skew(0deg); } }
-        
+        @keyframes glitch-anim {
+            0% { transform: translate(0); } 20% { transform: translate(-2px, 2px); } 40% { transform: translate(-2px, -2px); } 60% { transform: translate(2px, 2px); } 80% { transform: translate(2px, -2px); } 100% { transform: translate(0); }
+        }
         .start-btn {
-            margin-top: 50px; padding: 15px 40px;
-            background: transparent; color: var(--crt-blue);
-            border: 2px solid var(--crt-blue);
-            font-family: 'Orbitron'; font-size: 20px; letter-spacing: 5px;
-            cursor: pointer; transition: 0.3s;
-            box-shadow: 0 0 10px var(--crt-blue);
+            margin-top: 40px; padding: 15px 50px; background: transparent;
+            color: var(--neon-cyan); border: 2px solid var(--neon-cyan);
+            font-family: 'Orbitron'; font-size: 24px; cursor: pointer; transition: 0.3s;
+            box-shadow: 0 0 20px var(--neon-cyan); text-transform: uppercase;
         }
-        .start-btn:hover { background: var(--crt-blue); color: #000; box-shadow: 0 0 50px var(--crt-blue); }
+        .start-btn:hover { background: var(--neon-cyan); color: #000; box-shadow: 0 0 60px var(--neon-cyan); }
 
-        /* 飘字 */
-        .floater { position: absolute; pointer-events: none; font-weight: bold; font-size: 14px; animation: floatUp 1s forwards; text-shadow: 0 0 5px currentColor; }
-        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-40px); } }
+        /* 浮动文字 */
+        .floater { position: absolute; pointer-events: none; font-weight: bold; font-size: 20px; animation: floatUp 1s forwards; }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-50px); } }
 
     </style>
 </head>
@@ -155,474 +122,425 @@
 
     <audio id="bgm" src="assets/bgm.mp3" loop></audio>
 
-    <div id="crt-frame">
-        <canvas id="game-canvas"></canvas>
+    <div id="crt-overlay"></div>
+    <canvas id="game-canvas"></canvas>
 
-        <div id="ui-layer">
-            <div class="panel top-left">
-                <div class="label">ENERGY_BUFFER</div>
-                <div class="val cyan"><span id="ui-energy">0</span></div>
-                <div class="label" style="margin-top:10px;">THREAT_WAVE</div>
-                <div class="val" style="color:#fff; font-size:18px;"><span id="ui-wave">1</span></div>
-            </div>
-
-            <div class="panel top-center">
-                <div class="label">SYSTEM INTEGRITY</div>
-                <div class="bar-frame" style="width:400px;">
-                    <div class="bar-fill" id="ui-hp-bar"></div>
-                </div>
-                <div class="label" style="text-align:center; margin-top:2px;"><span id="ui-hp-text">100</span>%</div>
-            </div>
-
-            <div class="panel right-menu">
-                <div class="label" style="border-bottom:1px solid #444; padding-bottom:5px; margin-bottom:5px;">CONFIG_MENU</div>
-                
-                <div class="btn-upgrade" id="btn-gun" onclick="Game.upgrade('gun')">
-                    <div>
-                        <div>MAIN_LASER <span style="font-size:10px; background:#333; padding:2px;">LV<span id="lv-gun">1</span></span></div>
-                        <div class="label" id="desc-gun">单发模式</div>
-                    </div>
-                    <div class="cost-tag" id="cost-gun">50</div>
-                </div>
-
-                <div class="btn-upgrade" id="btn-turret" onclick="Game.upgrade('turret')">
-                    <div>
-                        <div>DRONE_UNIT <span style="font-size:10px; background:#333; padding:2px;">LV<span id="lv-turret">0</span></span></div>
-                        <div class="label">浮游攻击终端</div>
-                    </div>
-                    <div class="cost-tag" id="cost-turret">100</div>
-                </div>
-
-                <div class="btn-upgrade" id="btn-stasis" onclick="Game.upgrade('stasis')">
-                    <div>
-                        <div>STASIS_FIELD <span style="font-size:10px; background:#333; padding:2px;">LV<span id="lv-stasis">0</span></span></div>
-                        <div class="label">时间减速立场</div>
-                    </div>
-                    <div class="cost-tag" id="cost-stasis">150</div>
-                </div>
-
-                <div class="btn-upgrade" id="btn-rate" onclick="Game.upgrade('rate')">
-                    <div>
-                        <div>DATA_MINING</div>
-                        <div class="label">提升自动/点击获取</div>
-                    </div>
-                    <div class="cost-tag" id="cost-rate">30</div>
-                </div>
-
-                <div class="btn-upgrade" id="btn-heal" onclick="Game.upgrade('heal')">
-                    <div>
-                        <div>SYS_REBOOT</div>
-                        <div class="label">修复 30% 核心</div>
-                    </div>
-                    <div class="cost-tag" id="cost-heal">50</div>
-                </div>
-            </div>
+    <div id="ui-layer">
+        <div class="panel top-left">
+            <div class="label">ENERGY SUPPLY</div>
+            <div class="val cyan"><span id="u-energy">0</span></div>
+            <div class="label" style="margin-top:10px;">THREAT LEVEL</div>
+            <div class="val" style="color:#fff"><span id="u-wave">1</span></div>
         </div>
 
-        <div id="boot-screen">
-            <div class="glitch-text">PROJECT_QI</div>
-            <div style="color:#666; margin-top:10px; font-size:12px; letter-spacing:2px;">VISUAL SYSTEM: PARTICLE // AUDIO: ENABLED</div>
-            <button class="start-btn" onclick="Game.init()">BOOT_SYSTEM</button>
+        <div class="panel top-center">
+            <div class="label">CORE INTEGRITY</div>
+            <div class="hp-bar"><div class="hp-fill" id="u-hp"></div></div>
+            <div class="label" style="margin-top:5px; text-align:center;"><span id="u-hp-text">100</span>%</div>
+        </div>
+
+        <div class="panel right-menu">
+            <h2>DEFENSE PROTOCOLS</h2>
+            
+            <div class="card" id="btn-gun" onclick="Game.buy('gun')">
+                <div class="c-head"><span>LASER_CANNON</span> <span class="c-lvl" id="l-gun">LV1</span></div>
+                <div class="c-desc" id="d-gun">单发模式</div>
+                <div class="c-cost" id="c-gun">50</div>
+            </div>
+
+            <div class="card" id="btn-turret" onclick="Game.buy('turret')">
+                <div class="c-head"><span>ORBIT_DRONE</span> <span class="c-lvl" id="l-turret">LV0</span></div>
+                <div class="c-desc">自动攻击浮游炮</div>
+                <div class="c-cost" id="c-turret">100</div>
+            </div>
+
+            <div class="card" id="btn-mine" onclick="Game.buy('mine')">
+                <div class="c-head"><span style="color:var(--neon-pink)">QUANTUM_MINE</span> <span class="c-lvl" id="l-mine">LV0</span></div>
+                <div class="c-desc">部署高爆地雷</div>
+                <div class="c-cost" id="c-mine">200</div>
+            </div>
+
+            <div class="card" id="btn-stasis" onclick="Game.buy('stasis')">
+                <div class="c-head"><span style="color:var(--neon-green)">STASIS_FIELD</span> <span class="c-lvl" id="l-stasis">LV0</span></div>
+                <div class="c-desc">范围减速力场</div>
+                <div class="c-cost" id="c-stasis">150</div>
+            </div>
+
+            <h2 style="margin-top:10px;">SYSTEM</h2>
+
+            <div class="card" id="btn-rate" onclick="Game.buy('rate')">
+                <div class="c-head"><span>DATA_MINING</span> <span class="c-lvl">INF</span></div>
+                <div class="c-desc">增加资源产出</div>
+                <div class="c-cost" id="c-rate">30</div>
+            </div>
+
+            <div class="card" id="btn-heal" onclick="Game.buy('heal')">
+                <div class="c-head"><span>EMERGENCY_REPAIR</span></div>
+                <div class="c-desc">修复 30% 核心</div>
+                <div class="c-cost" id="c-heal">50</div>
+            </div>
         </div>
     </div>
 
-    <script>
-        // --- 粒子系统 (核心视觉引擎) ---
-        class Particle {
-            constructor(x, y, type) {
-                this.x = x; this.y = y;
-                this.type = type; // 'core', 'bullet', 'spark', 'orb', 'enemy'
-                this.vx = (Math.random()-0.5) * 2;
-                this.vy = (Math.random()-0.5) * 2;
-                this.life = 1.0;
-                this.decay = Math.random() * 0.02 + 0.01;
-                this.size = Math.random() * 2 + 1;
-                
-                if(type === 'core') { this.color = '#00f3ff'; this.vx *= 0.1; this.vy *= 0.1; }
-                if(type === 'spark') { this.color = '#fff'; this.vx *= 4; this.vy *= 4; this.decay = 0.05; }
-                if(type === 'trail') { this.color = 'rgba(0, 243, 255, 0.5)'; this.decay = 0.08; this.vx=0; this.vy=0; }
-                if(type === 'enemy_trail') { this.color = 'rgba(255, 0, 60, 0.5)'; this.decay = 0.1; }
-            }
-            update() {
-                this.x += this.vx; this.y += this.vy;
-                this.life -= this.decay;
-                if(this.type === 'core') {
-                    // 核心粒子会被吸向中心，形成黑洞效果
-                    const dx = Game.cx - this.x; const dy = Game.cy - this.y;
-                    this.vx += dx * 0.001; this.vy += dy * 0.001;
-                }
-            }
-            draw(ctx) {
-                ctx.globalAlpha = Math.max(0, this.life);
-                ctx.fillStyle = this.color;
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill();
-            }
-        }
+    <div id="boot">
+        <div class="glitch-title">PROJECT_QI</div>
+        <div style="color:var(--neon-cyan); letter-spacing:5px; margin-top:10px;">NEON HORIZON</div>
+        <div style="color:#666; margin-top:20px;">AUDIO SYSTEM: READY // VISUALS: MAX</div>
+        <button class="start-btn" onclick="Game.init()">SYSTEM LINK</button>
+    </div>
 
-        // --- 音频引擎 (混合模式) ---
+    <script>
+        // --- 1. 音频合成器 (Audio Synth) ---
         const AudioSys = {
             ctx: null, bgm: null,
             init() {
                 this.ctx = new (window.AudioContext || window.webkitAudioContext)();
                 this.bgm = document.getElementById('bgm');
-                this.startBGM();
-                this.startDrone(); // 无论是否有MP3，都播放程序化底噪
-            },
-            startBGM() {
-                if(this.bgm) { this.bgm.volume = 0.4; this.bgm.play().catch(e=>{}); }
+                if(this.bgm) { this.bgm.volume = 0.4; this.bgm.play().catch(()=>{}); }
+                this.startDrone();
             },
             startDrone() {
-                // 生成深邃的太空底噪
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sawtooth'; osc.frequency.value = 50;
-                // 低通滤波
-                const filter = this.ctx.createBiquadFilter();
-                filter.type = 'lowpass'; filter.frequency.value = 120;
-                
-                gain.gain.value = 0.1;
-                osc.connect(filter).connect(gain).connect(this.ctx.destination);
-                osc.start();
+                // 深邃的太空底噪 (无需MP3也能响)
+                const o = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                const f = this.ctx.createBiquadFilter();
+                o.type = 'sawtooth'; o.frequency.value = 50;
+                f.type = 'lowpass'; f.frequency.value = 150;
+                g.gain.value = 0.05;
+                o.connect(f).connect(g).connect(this.ctx.destination);
+                o.start();
             },
             sfx(type) {
                 if(!this.ctx) return;
                 const t = this.ctx.currentTime;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.connect(gain).connect(this.ctx.destination);
+                const o = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                o.connect(g).connect(this.ctx.destination);
                 
-                if (type === 'shoot') {
-                    osc.frequency.setValueAtTime(600, t);
-                    osc.frequency.exponentialRampToValueAtTime(100, t+0.2);
-                    gain.gain.value = 0.1; osc.start(); osc.stop(t+0.2);
-                } else if (type === 'hit') {
-                    osc.type = 'square'; osc.frequency.setValueAtTime(100, t);
-                    gain.gain.setValueAtTime(0.1, t); gain.gain.linearRampToValueAtTime(0, t+0.1);
-                    osc.start(); osc.stop(t+0.1);
-                } else if (type === 'collect') {
-                    osc.type = 'sine'; osc.frequency.setValueAtTime(1000, t);
-                    osc.frequency.linearRampToValueAtTime(1500, t+0.1);
-                    gain.gain.value = 0.1; osc.start(); osc.stop(t+0.1);
+                if (type==='shoot') {
+                    o.frequency.setValueAtTime(800, t); o.frequency.exponentialRampToValueAtTime(100, t+0.2);
+                    g.gain.value=0.05; o.start(); o.stop(t+0.2);
+                } else if (type==='hit') {
+                    o.type='square'; o.frequency.setValueAtTime(150, t);
+                    g.gain.setValueAtTime(0.1, t); g.gain.linearRampToValueAtTime(0, t+0.1);
+                    o.start(); o.stop(t+0.1);
+                } else if (type==='collect') {
+                    o.type='sine'; o.frequency.setValueAtTime(1000, t); o.frequency.linearRampToValueAtTime(1500, t+0.1);
+                    g.gain.value=0.05; o.start(); o.stop(t+0.1);
                 }
             }
         };
 
-        // --- 游戏核心 ---
+        // --- 2. 粒子系统 (Visual Engine) ---
+        class Particle {
+            constructor(x, y, color, type) {
+                this.x=x; this.y=y; this.color=color; this.type=type;
+                this.life = 1.0;
+                this.vx = (Math.random()-0.5)*2;
+                this.vy = (Math.random()-0.5)*2;
+                this.size = Math.random()*2+1;
+                
+                if(type==='boom') { this.vx*=3; this.vy*=3; this.decay=0.03; }
+                if(type==='trail') { this.vx=0; this.vy=0; this.decay=0.05; this.size=2; }
+                if(type==='star') { this.vx=0; this.vy=0; this.decay=0; this.size=Math.random()*1.5; this.z=Math.random()*2; }
+            }
+            update() {
+                this.x+=this.vx; this.y+=this.vy;
+                if(this.type!=='star') this.life -= this.decay;
+                
+                if(this.type==='star') {
+                    // 星星向中心移动 (Warp effect)
+                    const dx = this.x - Game.cx; const dy = this.y - Game.cy;
+                    this.x -= dx * 0.005 * this.z; this.y -= dy * 0.005 * this.z;
+                    // 重置出界星星
+                    if(Math.abs(dx)<10 && Math.abs(dy)<10) {
+                        this.x = Math.random()*Game.w; this.y = Math.random()*Game.h;
+                    }
+                }
+            }
+            draw(ctx) {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill();
+            }
+        }
+
+        // --- 3. 游戏核心 ---
         const Game = {
             canvas: document.getElementById('game-canvas'),
-            ctx: null,
-            w: 0, h: 0, cx: 0, cy: 0,
-            frame: 0, running: false,
+            ctx: null, w:0, h:0, cx:0, cy:0,
+            frame:0, running:false,
 
-            energy: 0, hp: 100, maxHp: 100, wave: 1,
+            // 属性
+            energy:0, hp:100, maxHp:100, wave:1,
             
-            upgrades: {
-                gun: { lvl:1, max:5, cost:50 },
-                turret: { lvl:0, max:5, cost:100 },
-                stasis: { lvl:0, max:3, cost:150 },
-                rate: { lvl:1, cost:30 },
-                heal: { cost:50 }
+            // 升级
+            ups: {
+                gun: {lvl:1, max:5, cost:50},
+                turret: {lvl:0, max:5, cost:100},
+                mine: {lvl:0, max:3, cost:200},
+                stasis: {lvl:0, max:3, cost:150},
+                rate: {lvl:1, cost:30},
+                heal: {cost:50}
             },
 
-            particles: [], enemies: [], bullets: [], orbs: [],
+            // 实体池
+            parts: [], enemies: [], bullets: [], orbs: [], mines: [], stars: [],
             
-            autoRate: 1, lastFire: 0,
+            autoRate:1, lastFire:0, lastMine:0,
 
             init() {
-                document.getElementById('boot-screen').style.display = 'none';
+                document.getElementById('boot').style.display='none';
                 this.ctx = this.canvas.getContext('2d');
-                this.resize();
-                window.addEventListener('resize', ()=>this.resize());
+                this.resize(); window.addEventListener('resize', ()=>this.resize());
                 
-                this.canvas.addEventListener('mousedown', e => this.onClick(e));
-                this.canvas.addEventListener('touchstart', e => this.onClick(e.touches[0]));
+                this.canvas.addEventListener('mousedown', e=>this.click(e));
+                this.canvas.addEventListener('touchstart', e=>this.click(e.touches[0]));
 
                 AudioSys.init();
-                this.running = true;
-                this.loop();
-                this.updateUI();
+                // 生成背景星星
+                for(let i=0; i<100; i++) this.parts.push(new Particle(Math.random()*this.w, Math.random()*this.h, '#fff', 'star'));
+
+                this.running=true; this.loop(); this.ui();
             },
 
-            resize() {
-                this.w = this.canvas.width = window.innerWidth;
-                this.h = this.canvas.height = window.innerHeight;
-                this.cx = this.w/2; this.cy = this.h/2;
-            },
+            resize() { this.w=this.canvas.width=window.innerWidth; this.h=this.canvas.height=window.innerHeight; this.cx=this.w/2; this.cy=this.h/2; },
 
-            spawnParticle(x, y, type, count=1) {
-                for(let i=0; i<count; i++) this.particles.push(new Particle(x, y, type));
-            },
+            spawnP(x,y,c,t,n=1) { for(let i=0;i<n;i++) this.parts.push(new Particle(x,y,c,t)); },
 
-            onClick(e) {
-                const mx = e.clientX, my = e.clientY;
-                // 资源收集
+            click(e) {
+                const mx=e.clientX, my=e.clientY;
                 for(let i=this.orbs.length-1; i>=0; i--) {
                     const o = this.orbs[i];
-                    if(Math.hypot(o.x-mx, o.y-my) < o.r + 30) {
-                        const amt = 10 + this.upgrades.rate.lvl * 5;
+                    if(Math.hypot(o.x-mx, o.y-my) < o.r+30) {
+                        const amt = 15 + this.ups.rate.lvl*5;
                         this.energy += amt;
-                        this.spawnParticle(o.x, o.y, 'spark', 10);
-                        this.floatText(o.x, o.y, `+${amt}`, '#00f3ff');
+                        this.spawnP(o.x, o.y, '#00f3ff', 'boom', 10);
+                        this.float(o.x, o.y, `+${amt}`, '#00f3ff');
                         AudioSys.sfx('collect');
                         this.orbs.splice(i, 1);
-                        this.updateUI();
-                        return;
+                        this.ui(); return;
                     }
                 }
             },
 
-            upgrade(type) {
-                const u = this.upgrades[type];
-                if(type === 'heal') {
-                    if(this.energy >= u.cost && this.hp < this.maxHp) {
-                        this.energy -= u.cost; this.hp = Math.min(this.maxHp, this.hp+30);
-                        u.cost = Math.floor(u.cost * 1.5);
-                        this.updateUI();
+            buy(k) {
+                const u = this.ups[k];
+                if(k==='heal') {
+                    if(this.energy>=u.cost && this.hp<this.maxHp) {
+                        this.energy-=u.cost; this.hp=Math.min(this.maxHp, this.hp+30);
+                        u.cost=Math.floor(u.cost*1.5); this.ui();
                     }
                     return;
                 }
-                if(this.energy >= u.cost && (u.max ? u.lvl < u.max : true)) {
-                    this.energy -= u.cost; u.lvl++; u.cost = Math.floor(u.cost * 1.4);
-                    if(type==='rate') this.autoRate = 1 + u.lvl*0.5;
-                    this.updateUI();
+                if(this.energy>=u.cost && (u.max?u.lvl<u.max:true)) {
+                    this.energy-=u.cost; u.lvl++; u.cost=Math.floor(u.cost*1.4);
+                    if(k==='rate') this.autoRate = 1 + u.lvl*0.5;
+                    this.ui();
                 }
             },
 
-            // --- 循环与逻辑 ---
             loop() {
                 if(!this.running) return;
                 this.frame++;
-                
-                // 1. 生成逻辑
-                if(this.frame % 60 === 0) { this.energy += this.autoRate; this.updateUI(); }
-                
-                // 资源生成 (粒子球)
-                if(this.frame % (180 - this.upgrades.rate.lvl*5) === 0) {
-                    const pad=100;
-                    this.orbs.push({
-                        x: pad+Math.random()*(this.w-pad*2), y: pad+Math.random()*(this.h-pad*2),
-                        vx: (Math.random()-0.5)*0.5, vy: (Math.random()-0.5)*0.5,
-                        r: 10, life: 600, angle: 0
-                    });
+                this.update();
+                this.draw();
+                requestAnimationFrame(()=>this.loop());
+            },
+
+            update() {
+                // 1. 资源生成
+                if(this.frame%60===0) { this.energy+=this.autoRate; this.ui(); }
+                if(this.frame%(180-this.ups.rate.lvl*5)===0) {
+                    const p=100;
+                    this.orbs.push({x:p+Math.random()*(this.w-p*2), y:p+Math.random()*(this.h-p*2), r:0, mr:15, life:600});
                 }
 
-                // 敌人生成 (波次)
-                if(this.frame % Math.max(60, 200 - this.wave*5) === 0) {
-                    const ang = Math.random() * Math.PI * 2;
-                    const dist = Math.max(this.w, this.h) / 1.5;
-                    // 敌人类型
-                    let type = 'std'; let hp = 15+this.wave*5; let spd = 0.5+this.wave*0.05; let color = '#ff003c';
-                    if(this.wave>2 && Math.random()>0.7) { type='heavy'; hp*=2; spd*=0.6; color='#ff8800'; }
-                    
-                    this.enemies.push({
-                        x: this.cx+Math.cos(ang)*dist, y: this.cy+Math.sin(ang)*dist,
-                        hp, maxHp: hp, speed: spd, color, type, radius: type==='heavy'?20:12
-                    });
+                // 2. 敌人生成 (慢节奏)
+                if(this.frame % Math.max(80, 250 - this.wave*8) === 0) {
+                    const ang = Math.random()*Math.PI*2;
+                    const r = Math.max(this.w, this.h)/1.4;
+                    const type = this.wave>3 && Math.random()>0.7 ? 'tank' : 'std';
+                    const hp = type==='tank' ? 40+this.wave*10 : 15+this.wave*5;
+                    const spd = type==='tank' ? 0.2 : 0.6;
+                    const col = type==='tank' ? '#ffcc00' : '#ff0055';
+                    this.enemies.push({ x:this.cx+Math.cos(ang)*r, y:this.cy+Math.sin(ang)*r, hp, mhp:hp, spd, col, r:type==='tank'?20:12 });
                 }
-                if(this.frame % 1800 === 0) { this.wave++; this.floatText(this.cx, this.cy-100, `WAVE ${this.wave}`, '#ff003c'); }
+                if(this.frame%1800===0) { this.wave++; this.float(this.cx, this.cy-100, `WAVE ${this.wave}`, '#ff0055'); }
 
-                // 2. 战斗逻辑 (主炮)
-                const gLvl = this.upgrades.gun.lvl;
-                if(this.frame - this.lastFire > Math.max(10, 80 - gLvl*10)) {
-                    const target = this.getNearest();
-                    if(target) {
-                        this.lastFire = this.frame;
-                        AudioSys.sfx('shoot');
-                        const ang = Math.atan2(target.y - this.cy, target.x - this.cx);
-                        // 多重射击逻辑
-                        let count = gLvl >= 5 ? 3 : (gLvl >= 3 ? 2 : 1);
-                        for(let i=0; i<count; i++) {
-                            const spread = (i - (count-1)/2) * 0.15;
-                            this.bullets.push({
-                                x: this.cx, y: this.cy,
-                                vx: Math.cos(ang+spread)*8, vy: Math.sin(ang+spread)*8,
-                                dmg: 5+gLvl*3, life: 100, color: '#00f3ff'
-                            });
+                // 3. 武器逻辑
+                // 主炮
+                const gl = this.ups.gun.lvl;
+                if(this.frame-this.lastFire > Math.max(15, 80-gl*10)) {
+                    const t = this.near();
+                    if(t) {
+                        this.lastFire=this.frame; AudioSys.sfx('shoot');
+                        const a = Math.atan2(t.y-this.cy, t.x-this.cx);
+                        const n = gl>=5?3 : (gl>=3?2:1);
+                        for(let i=0; i<n; i++) {
+                            const sa = a + (i-(n-1)/2)*0.2;
+                            this.bullets.push({ x:this.cx, y:this.cy, vx:Math.cos(sa)*8, vy:Math.sin(sa)*8, dmg:5+gl*3, life:100, c:'#00f3ff' });
                         }
                     }
                 }
-
                 // 浮游炮
-                const tLvl = this.upgrades.turret.lvl;
-                if(tLvl > 0 && this.frame % 40 === 0) {
-                    for(let i=0; i<tLvl; i++) {
-                        const tAng = (this.frame*0.01) + (i * (Math.PI*2/tLvl));
-                        const tx = this.cx + Math.cos(tAng)*80, ty = this.cy + Math.sin(tAng)*80;
-                        const target = this.getNearest(tx, ty);
-                        if(target) {
-                            const ang = Math.atan2(target.y - ty, target.x - tx);
-                            this.bullets.push({ x: tx, y: ty, vx: Math.cos(ang)*6, vy: Math.sin(ang)*6, dmg: 5, life: 60, color: '#ffd700' });
+                const tl = this.ups.turret.lvl;
+                if(tl>0 && this.frame%40===0) {
+                    for(let i=0; i<tl; i++) {
+                        const a = (this.frame*0.01) + (i*(Math.PI*2/tl));
+                        const tx = this.cx+Math.cos(a)*80, ty=this.cy+Math.sin(a)*80;
+                        const t = this.near(tx,ty);
+                        if(t) {
+                            const ta = Math.atan2(t.y-ty, t.x-tx);
+                            this.bullets.push({x:tx, y:ty, vx:Math.cos(ta)*5, vy:Math.sin(ta)*5, dmg:5, life:60, c:'#ffcc00'});
                         }
                     }
                 }
+                // 地雷
+                const ml = this.ups.mine.lvl;
+                if(ml>0 && this.frame-this.lastMine > (200-ml*30)) {
+                    this.lastMine = this.frame;
+                    const a = Math.random()*Math.PI*2; const d = 100+Math.random()*100;
+                    this.mines.push({ x:this.cx+Math.cos(a)*d, y:this.cy+Math.sin(a)*d, dmg:50+ml*20, active:true });
+                }
 
-                // 3. 物理更新
-                // 减速力场
-                const sLvl = this.upgrades.stasis.lvl;
-                const sRange = sLvl * 60 + 100;
+                // 4. 物理结算
+                const sl = this.ups.stasis.lvl; const sr = sl*60+100; // 减速圈
 
                 this.enemies.forEach(e => {
-                    const ang = Math.atan2(this.cy - e.y, this.cx - e.x);
-                    let spd = e.speed;
-                    if(sLvl > 0 && Math.hypot(this.cx-e.x, this.cy-e.y) < sRange) spd *= 0.4;
+                    let s = e.spd;
+                    if(sl>0 && Math.hypot(this.cx-e.x, this.cy-e.y) < sr) s*=0.4; // 减速
+                    const a = Math.atan2(this.cy-e.y, this.cx-e.x);
+                    e.x += Math.cos(a)*s; e.y += Math.sin(a)*s;
                     
-                    e.x += Math.cos(ang)*spd; e.y += Math.sin(ang)*spd;
-                    // 拖尾粒子
-                    if(Math.random()>0.5) this.particles.push(new Particle(e.x, e.y, 'enemy_trail'));
+                    if(Math.random()>0.6) this.spawnP(e.x, e.y, e.col, 'trail'); // 拖尾
 
                     // 撞击
                     if(Math.hypot(this.cx-e.x, this.cy-e.y) < 40) {
-                        e.dead = true; this.hp -= 10; this.updateUI();
-                        AudioSys.sfx('hit');
-                        this.spawnParticle(e.x, e.y, 'spark', 20);
-                        if(this.hp<=0) { alert('SYSTEM FAILURE'); location.reload(); }
+                        e.dead=true; this.hp-=10; this.ui(); AudioSys.sfx('hit');
+                        this.spawnP(e.x, e.y, '#ff0055', 'boom', 15);
+                        if(this.hp<=0) { alert('MISSION FAILED'); location.reload(); }
                     }
                 });
 
                 this.bullets.forEach(b => {
-                    b.x += b.vx; b.y += b.vy; b.life--;
-                    this.spawnParticle(b.x, b.y, 'trail');
+                    b.x+=b.vx; b.y+=b.vy; b.life--;
+                    this.spawnP(b.x, b.y, b.c, 'trail');
                     for(let e of this.enemies) {
-                        if(Math.hypot(b.x-e.x, b.y-e.y) < e.radius + 5) {
-                            b.life = 0; e.hp -= b.dmg;
-                            this.spawnParticle(b.x, b.y, 'spark', 3);
-                            if(e.hp<=0) {
-                                e.dead = true;
-                                this.spawnParticle(e.x, e.y, 'spark', 15);
-                            }
+                        if(Math.hypot(b.x-e.x, b.y-e.y) < e.r+5) {
+                            b.life=0; e.hp-=b.dmg;
+                            this.spawnP(b.x, b.y, '#fff', 'spark', 3);
+                            if(e.hp<=0) { e.dead=true; this.spawnP(e.x, e.y, e.col, 'boom', 15); }
                             break;
                         }
                     }
                 });
 
-                // 资源球
-                this.orbs.forEach(o => {
-                    o.x += o.vx; o.y += o.vy; o.life--; o.angle += 0.05;
+                this.mines.forEach(m => {
+                    for(let e of this.enemies) {
+                        if(Math.hypot(m.x-e.x, m.y-e.y) < e.r+10) {
+                            m.dead=true; e.hp-=m.dmg;
+                            this.spawnP(m.x, m.y, '#ffcc00', 'boom', 20);
+                            if(e.hp<=0) { e.dead=true; this.spawnP(e.x, e.y, e.col, 'boom', 15); }
+                            break;
+                        }
+                    }
                 });
 
-                // 粒子更新
-                this.particles.forEach(p => p.update());
-                
-                // 清理
-                this.enemies = this.enemies.filter(e => !e.dead);
-                this.bullets = this.bullets.filter(b => b.life > 0);
-                this.orbs = this.orbs.filter(o => o.life > 0);
-                this.particles = this.particles.filter(p => p.life > 0);
+                this.orbs.forEach(o => { if(o.r<o.mr)o.r+=0.2; o.life--; });
+                this.parts.forEach(p => p.update());
 
-                this.draw();
-                requestAnimationFrame(() => this.loop());
+                // 清理
+                this.enemies = this.enemies.filter(e=>!e.dead);
+                this.bullets = this.bullets.filter(b=>b.life>0);
+                this.mines = this.mines.filter(m=>!m.dead);
+                this.orbs = this.orbs.filter(o=>o.life>0);
+                this.parts = this.parts.filter(p=>p.type==='star'||p.life>0);
             },
 
-            // --- 渲染 (Additive Blending) ---
             draw() {
-                // 拖尾效果
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-                this.ctx.fillRect(0, 0, this.w, this.h);
+                const ctx = this.ctx;
+                ctx.clearRect(0,0,this.w,this.h);
                 
                 // 开启发光模式 (核心技术)
-                this.ctx.globalCompositeOperation = 'lighter';
+                ctx.globalCompositeOperation = 'lighter';
 
-                // 1. 核心 Qi (粒子态)
-                for(let i=0; i<5; i++) {
-                    const ang = Math.random() * Math.PI*2;
-                    const r = 30 + Math.random()*10;
-                    this.particles.push(new Particle(this.cx+Math.cos(ang)*r, this.cy+Math.sin(ang)*r, 'core'));
-                }
-                
-                // 减速力场
-                if(this.upgrades.stasis.lvl > 0) {
-                    const r = this.upgrades.stasis.lvl * 60 + 100;
-                    this.ctx.strokeStyle = 'rgba(0, 243, 255, 0.1)';
-                    this.ctx.lineWidth = 1;
-                    this.ctx.beginPath(); this.ctx.arc(this.cx, this.cy, r, 0, Math.PI*2); this.ctx.stroke();
+                // 1. 绘制粒子 (包括星星背景)
+                this.parts.forEach(p => p.draw(ctx));
+
+                // 2. 减速力场
+                if(this.ups.stasis.lvl>0) {
+                    const r = this.ups.stasis.lvl*60+100;
+                    ctx.strokeStyle = 'rgba(0, 255, 100, 0.2)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(this.cx, this.cy, r, 0, Math.PI*2); ctx.stroke();
                 }
 
-                // 2. 绘制所有粒子
-                this.particles.forEach(p => p.draw(this.ctx));
+                // 3. 核心 Qi (呼吸光效)
+                const pulse = 30 + Math.sin(this.frame*0.1)*5;
+                ctx.fillStyle = '#00f3ff';
+                ctx.shadowColor = '#00f3ff'; ctx.shadowBlur = 30;
+                ctx.beginPath(); ctx.arc(this.cx, this.cy, pulse, 0, Math.PI*2); ctx.fill();
+                ctx.shadowBlur = 0;
 
-                // 3. 绘制实体 (用发光几何体代替图片)
-                
-                // 资源
+                // 4. 实体渲染
                 this.orbs.forEach(o => {
-                    this.ctx.fillStyle = '#00f3ff';
-                    this.ctx.beginPath(); this.ctx.arc(o.x, o.y, o.r, 0, Math.PI*2); this.ctx.fill();
-                    // 环绕光环
-                    this.ctx.strokeStyle = '#00f3ff';
-                    this.ctx.beginPath(); 
-                    this.ctx.arc(o.x, o.y, o.r+5, o.angle, o.angle+Math.PI); 
-                    this.ctx.stroke();
+                    ctx.fillStyle = '#00f3ff'; ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, Math.PI*2); ctx.fill();
+                    ctx.strokeStyle='#00f3ff'; ctx.beginPath(); ctx.arc(o.x, o.y, o.r+5, 0, Math.PI*2); ctx.stroke();
                 });
 
-                // 敌人
+                this.mines.forEach(m => {
+                    ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(m.x, m.y, 5, 0, Math.PI*2); ctx.fill();
+                    ctx.strokeStyle='#ffcc00'; ctx.beginPath(); ctx.arc(m.x, m.y, 10+Math.sin(this.frame*0.2)*5, 0, Math.PI*2); ctx.stroke();
+                });
+
                 this.enemies.forEach(e => {
-                    this.ctx.fillStyle = e.color;
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(e.x + Math.cos(this.frame*0.1)*e.radius, e.y + Math.sin(this.frame*0.1)*e.radius);
-                    for(let i=1; i<3; i++) {
-                        const a = (this.frame*0.1) + i*(Math.PI*2/3);
-                        this.ctx.lineTo(e.x+Math.cos(a)*e.radius, e.y+Math.sin(a)*e.radius);
-                    }
-                    this.ctx.fill();
+                    ctx.fillStyle = e.col; ctx.shadowColor=e.col; ctx.shadowBlur=15;
+                    ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI*2); ctx.fill();
+                    ctx.shadowBlur=0;
                 });
 
-                // 子弹
                 this.bullets.forEach(b => {
-                    this.ctx.fillStyle = b.color;
-                    this.ctx.beginPath(); this.ctx.arc(b.x, b.y, 3, 0, Math.PI*2); this.ctx.fill();
+                    ctx.fillStyle = b.c; ctx.shadowColor=b.c; ctx.shadowBlur=10;
+                    ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI*2); ctx.fill();
+                    ctx.shadowBlur=0;
                 });
 
-                // 浮游炮
-                const tLvl = this.upgrades.turret.lvl;
-                if(tLvl > 0) {
-                    this.ctx.fillStyle = '#ffb000';
-                    for(let i=0; i<tLvl; i++) {
-                        const ang = (this.frame*0.01) + (i * (Math.PI*2/tLvl));
-                        this.ctx.fillRect(this.cx+Math.cos(ang)*80-4, this.cy+Math.sin(ang)*80-4, 8, 8);
-                    }
-                }
-
-                // 恢复正常混合
-                this.ctx.globalCompositeOperation = 'source-over';
+                ctx.globalCompositeOperation = 'source-over';
             },
 
-            getNearest(x=this.cx, y=this.cy) {
+            near(x=this.cx, y=this.cy) {
                 let n=null, min=Infinity;
-                for(let e of this.enemies) {
-                    const d = Math.hypot(e.x-x, e.y-y);
-                    if(d<min) { min=d; n=e; }
-                }
+                for(let e of this.enemies) { const d=Math.hypot(e.x-x, e.y-y); if(d<min){min=d;n=e;} }
                 return n;
             },
 
-            floatText(x, y, txt, col) {
-                const el = document.createElement('div');
-                el.className = 'floater';
-                el.style.left = x+'px'; el.style.top = y+'px'; el.style.color = col;
-                el.innerText = txt;
-                document.getElementById('ui-layer').appendChild(el);
-                setTimeout(()=>el.remove(), 1000);
+            float(x, y, t, c) {
+                const d = document.createElement('div'); d.className='floater'; 
+                d.style.left=x+'px'; d.style.top=y+'px'; d.style.color=c; d.innerText=t;
+                document.getElementById('ui-layer').appendChild(d);
+                setTimeout(()=>d.remove(), 1000);
             },
 
-            updateUI() {
-                document.getElementById('ui-energy').innerText = Math.floor(this.energy);
-                document.getElementById('ui-wave').innerText = this.wave;
-                document.getElementById('ui-hp-bar').style.width = (this.hp/this.maxHp)*100 + '%';
-                document.getElementById('ui-hp-text').innerText = Math.ceil(this.hp);
+            ui() {
+                document.getElementById('u-energy').innerText = Math.floor(this.energy);
+                document.getElementById('u-wave').innerText = this.wave;
+                document.getElementById('u-hp').style.width = (this.hp/this.maxHp)*100+'%';
+                document.getElementById('u-hp-text').innerText = Math.ceil(this.hp);
                 
-                this.updateBtn('gun'); this.updateBtn('turret'); this.updateBtn('stasis');
-                this.updateBtn('rate'); this.updateBtn('heal');
+                this.btn('gun'); this.btn('turret'); this.btn('mine');
+                this.btn('stasis'); this.btn('rate'); this.btn('heal');
             },
 
-            updateBtn(id) {
-                const u = this.upgrades[id];
-                const btn = document.getElementById('btn-'+id);
-                document.getElementById('cost-'+id).innerText = u.cost;
-                if(u.max && document.getElementById('lv-'+id)) document.getElementById('lv-'+id).innerText = u.lvl;
+            btn(k) {
+                const u=this.ups[k]; const el=document.getElementById('btn-'+k);
+                document.getElementById('c-'+k).innerText = u.cost;
+                if(u.max && document.getElementById('l-'+k)) document.getElementById('l-'+k).innerText = 'LV'+u.lvl;
                 
-                if(id==='gun') document.getElementById('desc-gun').innerText = u.lvl>=5?"散射风暴":(u.lvl>=3?"双发":"单发");
+                if(k==='gun') document.getElementById('d-gun').innerText = u.lvl>=5?'散射风暴':(u.lvl>=3?'双发':'单发');
 
-                if(this.energy < u.cost || (u.max && u.lvl>=u.max)) btn.classList.add('disabled');
-                else btn.classList.remove('disabled');
+                if(this.energy<u.cost || (u.max && u.lvl>=u.max)) el.classList.add('disabled');
+                else el.classList.remove('disabled');
             }
         };
     </script>
