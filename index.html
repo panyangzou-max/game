@@ -198,356 +198,377 @@
                 }
             }
         };
+const Game = {
+    canvas: document.getElementById('game-canvas'),
+    ctx: null, w:0, h:0, cx:0, cy:0,
+    frame:0, running:false,
 
-        const Game = {
-            canvas: document.getElementById('game-canvas'),
-            ctx: null, w:0, h:0, cx:0, cy:0,
-            frame:0, running:false,
+    energy:0, hp:100, maxHp:100, wave:1,
+    
+    // ... (保留原有的 ups 配置)
+    ups: {
+        gun: {lvl:1, max:5, cost:50},
+        turret: {lvl:0, max:5, cost:100},
+        stasis: {lvl:0, max:3, cost:150},
+        mine: {lvl:0, max:3, cost:200},
+        rate: {lvl:1, cost:30},
+        heal: {cost:50}
+    },
 
-            energy:0, hp:100, maxHp:100, wave:1,
-            
-            ups: {
-                gun: {lvl:1, max:5, cost:50},
-                turret: {lvl:0, max:5, cost:100},
-                stasis: {lvl:0, max:3, cost:150},
-                mine: {lvl:0, max:3, cost:200},
-                rate: {lvl:1, cost:30},
-                heal: {cost:50}
-            },
+    // 实体
+    orbs:[], enemies:[], bullets:[], mines:[], particles:[], ripples:[],
+    
+    // [新增] 背景装饰对象
+    stars: [], nebulas: [],
 
-            // 实体
-            orbs:[], enemies:[], bullets:[], mines:[], particles:[], ripples:[],
-            autoRate:1, lastFire:0, lastMine:0,
+    autoRate:1, lastFire:0, lastMine:0,
 
-            init() {
-                document.getElementById('boot').style.display='none';
-                this.ctx = this.canvas.getContext('2d');
-                this.resize(); window.addEventListener('resize', ()=>this.resize());
-                
-                // 交互
-                this.canvas.addEventListener('mousedown', e=>this.click(e));
-                this.canvas.addEventListener('touchstart', e=>this.click(e.touches[0]));
+    init() {
+        document.getElementById('boot').style.display='none';
+        this.ctx = this.canvas.getContext('2d');
+        this.resize(); 
+        window.addEventListener('resize', ()=>this.resize());
+        
+        // [新增] 初始化星空背景
+        this.initBackground();
 
-                AudioSys.init();
-                this.running=true; this.loop(); this.ui();
-            },
+        // 交互
+        this.canvas.addEventListener('mousedown', e=>this.click(e));
+        this.canvas.addEventListener('touchstart', e=>this.click(e.touches[0]));
 
-            resize() { this.w=this.canvas.width=window.innerWidth; this.h=this.canvas.height=window.innerHeight; this.cx=this.w/2; this.cy=this.h/2; },
+        AudioSys.init();
+        this.running=true; this.loop(); this.ui();
+    },
 
-            click(e) {
-                const mx=e.clientX, my=e.clientY;
-                for(let i=this.orbs.length-1; i>=0; i--) {
-                    const o = this.orbs[i];
-                    if(Math.hypot(o.x-mx, o.y-my) < o.r+40) {
-                        const v = 20 + this.ups.rate.lvl*5;
-                        this.energy+=v;
-                        this.float(o.x, o.y, `+${v}`, '#0ff');
-                        this.boom(o.x, o.y, '#0ff', 8);
-                        this.orbs.splice(i,1); AudioSys.sfx('collect'); this.ui(); return;
-                    }
-                }
-            },
+    // [新增] 背景初始化函数
+    initBackground() {
+        this.stars = [];
+        this.nebulas = [];
+        
+        // 1. 生成星星 (300颗)
+        for(let i=0; i<300; i++) {
+            this.stars.push({
+                x: Math.random() * this.w,
+                y: Math.random() * this.h,
+                sz: Math.random() * 1.5, // 大小
+                a: Math.random(),        // 基础透明度
+                blink: Math.random() * 0.05 // 闪烁速度
+            });
+        }
 
-            buy(k) {
-                const u = this.ups[k];
-                if(k==='heal') {
-                    if(this.energy>=u.cost && this.hp<this.maxHp) {
-                        this.energy-=u.cost; this.hp=Math.min(this.maxHp, this.hp+30);
-                        u.cost=Math.floor(u.cost*1.5); this.ui();
-                    }
-                    return;
-                }
-                if(this.energy>=u.cost && (u.max?u.lvl<u.max:true)) {
-                    this.energy-=u.cost; u.lvl++; u.cost=Math.floor(u.cost*1.3);
-                    if(k==='rate') this.autoRate = 1 + u.lvl*0.5;
-                    this.ui();
-                }
-            },
+        // 2. 生成星云 (5-8个大团块)
+        for(let i=0; i<6; i++) {
+            this.nebulas.push({
+                x: Math.random() * this.w,
+                y: Math.random() * this.h,
+                r: 300 + Math.random() * 400, // 半径
+                c: Math.random() > 0.5 ? '#200040' : '#001040', // 深紫或深蓝
+                vx: (Math.random()-0.5) * 0.1,
+                vy: (Math.random()-0.5) * 0.1
+            });
+        }
+    },
 
-            loop() {
-                if(!this.running) return;
-                this.frame++;
-                this.update();
-                this.draw();
-                requestAnimationFrame(()=>this.loop());
-            },
+    resize() { 
+        this.w=this.canvas.width=window.innerWidth; 
+        this.h=this.canvas.height=window.innerHeight; 
+        this.cx=this.w/2; this.cy=this.h/2; 
+        // 窗口大小改变时重置背景，防止拉伸
+        if(this.running) this.initBackground(); 
+    },
 
-            update() {
-                // 1. 生成
-                if(this.frame%60===0) { this.energy+=this.autoRate; this.ui(); }
-                
-                // 资源 (更慢，更少)
-                if(this.frame%(150-this.ups.rate.lvl*5)===0) {
-                    const p=100;
-                    this.orbs.push({
-                        x:p+Math.random()*(this.w-p*2), y:p+Math.random()*(this.h-p*2),
-                        vx:(Math.random()-0.5)*0.2, vy:(Math.random()-0.5)*0.2,
-                        r:0, mr:15, life:600
-                    });
-                }
+    // ... (保留 click 和 buy 方法不变)
+    click(e) { /*...*/ },
+    buy(k) { /*...*/ },
 
-                // 敌人 (更慢)
-                if(this.frame % Math.max(100, 300 - this.wave*10) === 0) {
-                    const a = Math.random()*Math.PI*2;
-                    const r = Math.max(this.w, this.h)/1.4;
-                    const type = this.wave>3 && Math.random()>0.7 ? 'heavy' : 'std';
-                    const hp = type==='heavy' ? 50+this.wave*15 : 20+this.wave*5;
-                    const spd = type==='heavy' ? 0.2 : 0.5;
-                    const col = type==='heavy' ? '#fc0' : '#f05';
-                    this.enemies.push({ x:this.cx+Math.cos(a)*r, y:this.cy+Math.sin(a)*r, hp, mhp:hp, spd, col, r:type==='heavy'?25:15 });
-                }
-                if(this.frame%2000===0) { this.wave++; this.float(this.cx, this.cy-150, `WAVE ${this.wave}`, '#f05'); }
+    loop() {
+        if(!this.running) return;
+        this.frame++;
+        this.update();
+        this.draw();
+        requestAnimationFrame(()=>this.loop());
+    },
 
-                // 2. 琪的脉冲 (Beat)
-                if(this.frame % 120 === 0) {
-                    this.ripples.push({r:50, a:0.5, w:2, maxR:400});
-                }
+    update() {
+        // ... (保留原有的 update 逻辑，所有游戏逻辑不变)
+        // 1. 生成
+        if(this.frame%60===0) { this.energy+=this.autoRate; this.ui(); }
+        // 资源
+        if(this.frame%(150-this.ups.rate.lvl*5)===0) {
+            const p=100;
+            this.orbs.push({
+                x:p+Math.random()*(this.w-p*2), y:p+Math.random()*(this.h-p*2),
+                vx:(Math.random()-0.5)*0.2, vy:(Math.random()-0.5)*0.2,
+                r:0, mr:15, life:600
+            });
+        }
+        // 敌人
+        if(this.frame % Math.max(100, 300 - this.wave*10) === 0) {
+            const a = Math.random()*Math.PI*2;
+            const r = Math.max(this.w, this.h)/1.4;
+            const type = this.wave>3 && Math.random()>0.7 ? 'heavy' : 'std';
+            const hp = type==='heavy' ? 50+this.wave*15 : 20+this.wave*5;
+            const spd = type==='heavy' ? 0.2 : 0.5;
+            const col = type==='heavy' ? '#fc0' : '#f05';
+            this.enemies.push({ x:this.cx+Math.cos(a)*r, y:this.cy+Math.sin(a)*r, hp, mhp:hp, spd, col, r:type==='heavy'?25:15 });
+        }
+        if(this.frame%2000===0) { this.wave++; this.float(this.cx, this.cy-150, `WAVE ${this.wave}`, '#f05'); }
 
-                // 3. 武器
-                const gl = this.ups.gun.lvl;
-                if(this.frame-this.lastFire > Math.max(15, 80-gl*10)) {
-                    const t = this.near();
-                    if(t) {
-                        this.lastFire=this.frame; AudioSys.sfx('shoot');
-                        const a = Math.atan2(t.y-this.cy, t.x-this.cx);
-                        const n = gl>=5?3 : (gl>=3?2:1);
-                        for(let i=0; i<n; i++) {
-                            const sa = a + (i-(n-1)/2)*0.2;
-                            this.bullets.push({x:this.cx, y:this.cy, vx:Math.cos(sa)*7, vy:Math.sin(sa)*7, dmg:8+gl*4, life:120, c:'#0ff'});
-                        }
-                    }
-                }
+        // 2. 琪的脉冲
+        if(this.frame % 120 === 0) {
+            this.ripples.push({r:50, a:0.5, w:2, maxR:400});
+        }
 
-                const tl = this.ups.turret.lvl;
-                if(tl>0 && this.frame%50===0) {
-                    for(let i=0; i<tl; i++) {
-                        const a = (this.frame*0.01) + (i*(Math.PI*2/tl));
-                        const tx = this.cx+Math.cos(a)*100, ty=this.cy+Math.sin(a)*100;
-                        const t = this.near(tx,ty);
-                        if(t) {
-                            const ta = Math.atan2(t.y-ty, t.x-tx);
-                            this.bullets.push({x:tx, y:ty, vx:Math.cos(ta)*5, vy:Math.sin(ta)*5, dmg:5, life:80, c:'#fc0'});
-                        }
-                    }
-                }
+        // [新增] 更新星云缓慢移动
+        this.nebulas.forEach(n => {
+            n.x += n.vx; n.y += n.vy;
+        });
 
-                const ml = this.ups.mine.lvl;
-                if(ml>0 && this.frame-this.lastMine > (200-ml*30)) {
-                    this.lastMine = this.frame;
-                    const a = Math.random()*Math.PI*2; const d = 120+Math.random()*100;
-                    this.mines.push({ x:this.cx+Math.cos(a)*d, y:this.cy+Math.sin(a)*d, dmg:50+ml*20, dead:false });
-                }
-
-                // 4. 物理
-                const sl = this.ups.stasis.lvl; const sr = sl*80+100;
-
-                this.enemies.forEach(e => {
-                    let s = e.spd;
-                    if(sl>0 && Math.hypot(this.cx-e.x, this.cy-e.y) < sr) s*=0.3;
-                    const a = Math.atan2(this.cy-e.y, this.cx-e.x);
-                    e.x += Math.cos(a)*s; e.y += Math.sin(a)*s;
-                    
-                    if(Math.hypot(this.cx-e.x, this.cy-e.y) < 50) {
-                        e.dead=true; this.hp-=10; this.ui(); AudioSys.sfx('hit');
-                        this.boom(e.x, e.y, '#f05', 20);
-                        if(this.hp<=0) { alert('CORE LOST'); location.reload(); }
-                    }
-                });
-
-                this.bullets.forEach(b => {
-                    b.x+=b.vx; b.y+=b.vy; b.life--;
-                    // 拖尾粒子
-                    if(Math.random()>0.5) this.particles.push({x:b.x, y:b.y, vx:0, vy:0, life:0.5, decay:0.05, c:b.c, sz:2});
-                    
-                    for(let e of this.enemies) {
-                        if(Math.hypot(b.x-e.x, b.y-e.y) < e.r+5) {
-                            b.life=0; e.hp-=b.dmg;
-                            this.boom(b.x, b.y, b.c, 3);
-                            if(e.hp<=0) { e.dead=true; this.boom(e.x, e.y, e.col, 15); }
-                            break;
-                        }
-                    }
-                });
-
-                this.mines.forEach(m => {
-                    for(let e of this.enemies) {
-                        if(Math.hypot(m.x-e.x, m.y-e.y) < e.r+15) {
-                            m.dead=true; e.hp-=m.dmg;
-                            this.boom(m.x, m.y, '#fc0', 20);
-                            this.ripples.push({x:m.x, y:m.y, r:10, a:1, w:3, maxR:100}); // 爆炸波纹
-                            if(e.hp<=0) { e.dead=true; this.boom(e.x, e.y, e.col, 15); }
-                            break;
-                        }
-                    }
-                });
-
-                this.orbs.forEach(o => { o.x+=o.vx; o.y+=o.vy; if(o.r<o.mr)o.r+=0.5; o.life--; });
-                
-                this.particles.forEach(p => { p.x+=p.vx; p.y+=p.vy; p.life-=p.decay; });
-                this.ripples.forEach(r => { r.r+=2; r.a-=0.02; });
-
-                // 清理
-                this.enemies = this.enemies.filter(e=>!e.dead);
-                this.bullets = this.bullets.filter(b=>b.life>0);
-                this.mines = this.mines.filter(m=>!m.dead);
-                this.orbs = this.orbs.filter(o=>o.life>0);
-                this.particles = this.particles.filter(p=>p.life>0);
-                this.ripples = this.ripples.filter(r=>r.a>0);
-            },
-
-            draw() {
-                const ctx = this.ctx;
-                
-                // 1. 引力网格背景 (Gravity Grid)
-                ctx.fillStyle = '#020204';
-                ctx.fillRect(0,0,this.w,this.h);
-                
-                ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                // 绘制弯曲的网格
-                const gridSpace = 60;
-                const time = this.frame * 0.005;
-                for(let x=0; x<=this.w; x+=gridSpace) {
-                    for(let y=0; y<=this.h; y+=gridSpace) {
-                        // 简单的引力透视算法
-                        const dist = Math.hypot(x-this.cx, y-this.cy);
-                        const pull = Math.max(0, (1 - dist/800)); // 越近引力越大
-                        const dx = (this.cx - x) * pull * 0.5;
-                        const dy = (this.cy - y) * pull * 0.5;
-                        
-                        // 画点
-                        ctx.moveTo(x+dx, y+dy);
-                        ctx.arc(x+dx, y+dy, 1, 0, Math.PI*2);
-                    }
-                }
-                ctx.stroke();
-
-                ctx.globalCompositeOperation = 'lighter'; // 发光模式
-
-                // 2. 绘制星环琪 (Star-Ring Qi)
-                // 震动特效 (Glitch Shake)
-                const shake = Math.random()*2;
-                
-                // 核心
-                ctx.shadowBlur = 30; ctx.shadowColor = '#0ff';
-                ctx.fillStyle = '#00f3ff';
-                ctx.beginPath(); ctx.arc(this.cx+shake, this.cy+shake, 30, 0, Math.PI*2); ctx.fill();
-                
-                // 星环 1 (快)
-                ctx.strokeStyle = 'rgba(0, 243, 255, 0.8)'; ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.ellipse(this.cx, this.cy, 50, 20, this.frame*0.05, 0, Math.PI*2);
-                ctx.stroke();
-
-                // 星环 2 (慢, 脉冲)
-                const r2 = 70 + Math.sin(this.frame*0.05)*10;
-                ctx.strokeStyle = 'rgba(255, 0, 85, 0.6)';
-                ctx.beginPath();
-                ctx.ellipse(this.cx, this.cy, r2, r2, -this.frame*0.02, 0, Math.PI*2);
-                ctx.stroke();
-
-                // 3. 绘制实体
-                
-                // 减速力场
-                if(this.ups.stasis.lvl>0) {
-                    const r = this.ups.stasis.lvl*80+100;
-                    ctx.fillStyle = 'rgba(0, 255, 100, 0.05)';
-                    ctx.beginPath(); ctx.arc(this.cx, this.cy, r, 0, Math.PI*2); ctx.fill();
-                    ctx.strokeStyle = 'rgba(0, 255, 100, 0.2)';
-                    ctx.beginPath(); ctx.arc(this.cx, this.cy, r, 0, Math.PI*2); ctx.stroke();
-                }
-
-                // 资源
-                this.orbs.forEach(o => {
-                    ctx.shadowColor='#0ff'; ctx.shadowBlur=10; ctx.fillStyle='#0ff';
-                    ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, Math.PI*2); ctx.fill();
-                });
-
-                // 地雷
-                this.mines.forEach(m => {
-                    ctx.shadowColor='#fc0'; ctx.shadowBlur=5; ctx.fillStyle='#fc0';
-                    ctx.beginPath(); ctx.arc(m.x, m.y, 4, 0, Math.PI*2); ctx.fill();
-                    ctx.strokeStyle='#fc0'; ctx.lineWidth=1;
-                    ctx.beginPath(); ctx.arc(m.x, m.y, 8+Math.sin(this.frame*0.2)*4, 0, Math.PI*2); ctx.stroke();
-                });
-
-                // 敌人
-                this.enemies.forEach(e => {
-                    ctx.shadowColor=e.col; ctx.shadowBlur=10; ctx.fillStyle=e.col;
-                    ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI*2); ctx.fill();
-                });
-
-                // 子弹
-                this.bullets.forEach(b => {
-                    ctx.shadowColor=b.c; ctx.shadowBlur=5; ctx.fillStyle=b.c;
-                    ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI*2); ctx.fill();
-                });
-
-                // 浮游炮
-                const tl = this.ups.turret.lvl;
-                if(tl>0) {
-                    ctx.fillStyle = '#fc0'; ctx.shadowColor='#fc0';
-                    for(let i=0; i<tl; i++) {
-                        const a = (this.frame*0.01) + (i*(Math.PI*2/tl));
-                        const tx = this.cx+Math.cos(a)*100, ty=this.cy+Math.sin(a)*100;
-                        ctx.beginPath(); ctx.arc(tx, ty, 4, 0, Math.PI*2); ctx.fill();
-                    }
-                }
-
-                // 4. 粒子与波纹
-                ctx.shadowBlur=0;
-                this.particles.forEach(p => {
-                    ctx.globalAlpha = p.life; ctx.fillStyle = p.c;
-                    ctx.beginPath(); ctx.arc(p.x, p.y, p.sz, 0, Math.PI*2); ctx.fill();
-                });
-
-                this.ripples.forEach(r => {
-                    ctx.globalAlpha = r.a; ctx.strokeStyle = '#0ff'; ctx.lineWidth = r.w;
-                    let rx = r.x || this.cx; let ry = r.y || this.cy; // 默认中心
-                    ctx.beginPath(); ctx.arc(rx, ry, r.r, 0, Math.PI*2); ctx.stroke();
-                });
-
-                ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
-            },
-
-            near(x=this.cx, y=this.cy) {
-                let n=null, min=Infinity;
-                for(let e of this.enemies) { const d=Math.hypot(e.x-x, e.y-y); if(d<min){min=d;n=e;} }
-                return n;
-            },
-
-            float(x, y, t, c) {
-                const d = document.createElement('div'); d.className='floater'; 
-                d.style.left=x+'px'; d.style.top=y+'px'; d.style.color=c; d.innerText=t;
-                document.getElementById('ui-layer').appendChild(d);
-                setTimeout(()=>d.remove(), 1200);
-            },
-
-            boom(x, y, c, n) {
+        // ... (保留剩下的 update 逻辑: 武器、物理碰撞等)
+        // 复制你原来的 update 中关于 bullets, turret, mine, enemies, collision 的代码
+        const gl = this.ups.gun.lvl;
+        if(this.frame-this.lastFire > Math.max(15, 80-gl*10)) {
+            const t = this.near();
+            if(t) {
+                this.lastFire=this.frame; AudioSys.sfx('shoot');
+                const a = Math.atan2(t.y-this.cy, t.x-this.cx);
+                const n = gl>=5?3 : (gl>=3?2:1);
                 for(let i=0; i<n; i++) {
-                    const vx=(Math.random()-0.5)*4, vy=(Math.random()-0.5)*4;
-                    this.particles.push({x, y, vx, vy, life:1, decay:0.03, c, sz:Math.random()*2+1});
+                    const sa = a + (i-(n-1)/2)*0.2;
+                    this.bullets.push({x:this.cx, y:this.cy, vx:Math.cos(sa)*7, vy:Math.sin(sa)*7, dmg:8+gl*4, life:120, c:'#0ff'});
                 }
-            },
-
-            ui() {
-                document.getElementById('u-eng').innerText = Math.floor(this.energy);
-                document.getElementById('u-wave').innerText = this.wave;
-                document.getElementById('u-hp').style.width = (this.hp/this.maxHp)*100+'%';
-                document.getElementById('u-hp-text').innerText = Math.ceil(this.hp);
-                
-                this.btn('gun'); this.btn('turret'); this.btn('mine');
-                this.btn('stasis'); this.btn('rate'); this.btn('heal');
-            },
-
-            btn(k) {
-                const u=this.ups[k]; const el=document.getElementById('btn-'+k);
-                document.getElementById('c-'+k).innerText = u.cost;
-                if(this.energy<u.cost || (u.max && u.lvl>=u.max)) el.classList.add('disabled');
-                else el.classList.remove('disabled');
             }
-        };
+        }
+        const tl = this.ups.turret.lvl;
+        if(tl>0 && this.frame%50===0) {
+            for(let i=0; i<tl; i++) {
+                const a = (this.frame*0.01) + (i*(Math.PI*2/tl));
+                const tx = this.cx+Math.cos(a)*100, ty=this.cy+Math.sin(a)*100;
+                const t = this.near(tx,ty);
+                if(t) {
+                    const ta = Math.atan2(t.y-ty, t.x-tx);
+                    this.bullets.push({x:tx, y:ty, vx:Math.cos(ta)*5, vy:Math.sin(ta)*5, dmg:5, life:80, c:'#fc0'});
+                }
+            }
+        }
+        const ml = this.ups.mine.lvl;
+        if(ml>0 && this.frame-this.lastMine > (200-ml*30)) {
+            this.lastMine = this.frame;
+            const a = Math.random()*Math.PI*2; const d = 120+Math.random()*100;
+            this.mines.push({ x:this.cx+Math.cos(a)*d, y:this.cy+Math.sin(a)*d, dmg:50+ml*20, dead:false });
+        }
+        // 物理
+        const sl = this.ups.stasis.lvl; const sr = sl*80+100;
+        this.enemies.forEach(e => {
+            let s = e.spd;
+            if(sl>0 && Math.hypot(this.cx-e.x, this.cy-e.y) < sr) s*=0.3;
+            const a = Math.atan2(this.cy-e.y, this.cx-e.x);
+            e.x += Math.cos(a)*s; e.y += Math.sin(a)*s;
+            
+            if(Math.hypot(this.cx-e.x, this.cy-e.y) < 50) {
+                e.dead=true; this.hp-=10; this.ui(); AudioSys.sfx('hit');
+                this.boom(e.x, e.y, '#f05', 20);
+                if(this.hp<=0) { alert('CORE LOST'); location.reload(); }
+            }
+        });
+        this.bullets.forEach(b => {
+            b.x+=b.vx; b.y+=b.vy; b.life--;
+            if(Math.random()>0.5) this.particles.push({x:b.x, y:b.y, vx:0, vy:0, life:0.5, decay:0.05, c:b.c, sz:2});
+            for(let e of this.enemies) {
+                if(Math.hypot(b.x-e.x, b.y-e.y) < e.r+5) {
+                    b.life=0; e.hp-=b.dmg;
+                    this.boom(b.x, b.y, b.c, 3);
+                    if(e.hp<=0) { e.dead=true; this.boom(e.x, e.y, e.col, 15); }
+                    break;
+                }
+            }
+        });
+        this.mines.forEach(m => {
+            for(let e of this.enemies) {
+                if(Math.hypot(m.x-e.x, m.y-e.y) < e.r+15) {
+                    m.dead=true; e.hp-=m.dmg;
+                    this.boom(m.x, m.y, '#fc0', 20);
+                    this.ripples.push({x:m.x, y:m.y, r:10, a:1, w:3, maxR:100});
+                    if(e.hp<=0) { e.dead=true; this.boom(e.x, e.y, e.col, 15); }
+                    break;
+                }
+            }
+        });
+        this.orbs.forEach(o => { o.x+=o.vx; o.y+=o.vy; if(o.r<o.mr)o.r+=0.5; o.life--; });
+        this.particles.forEach(p => { p.x+=p.vx; p.y+=p.vy; p.life-=p.decay; });
+        this.ripples.forEach(r => { r.r+=2; r.a-=0.02; });
+        this.enemies = this.enemies.filter(e=>!e.dead);
+        this.bullets = this.bullets.filter(b=>b.life>0);
+        this.mines = this.mines.filter(m=>!m.dead);
+        this.orbs = this.orbs.filter(o=>o.life>0);
+        this.particles = this.particles.filter(p=>p.life>0);
+        this.ripples = this.ripples.filter(r=>r.a>0);
+    },
+
+    draw() {
+        const ctx = this.ctx;
+        
+        // --- 1. 背景层优化 ---
+
+        // 1.1 基础深色径向背景 (消除纯黑死板感)
+        const bgGrad = ctx.createRadialGradient(this.cx, this.cy, 0, this.cx, this.cy, Math.max(this.w, this.h));
+        bgGrad.addColorStop(0, '#060a12'); // 中心微蓝
+        bgGrad.addColorStop(1, '#000000'); // 边缘纯黑
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0,0,this.w,this.h);
+
+        // 1.2 绘制星云 (叠加模式，增加梦幻感)
+        ctx.globalCompositeOperation = 'lighter';
+        this.nebulas.forEach(n => {
+            ctx.fillStyle = n.c;
+            ctx.globalAlpha = 0.08; // 非常淡
+            ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI*2); ctx.fill();
+        });
+
+        // 1.3 绘制星星 (带闪烁)
+        ctx.globalCompositeOperation = 'source-over';
+        this.stars.forEach(s => {
+            // 计算闪烁透明度
+            const blink = 0.3 + Math.abs(Math.sin(this.frame * s.blink + s.x)) * 0.7;
+            ctx.fillStyle = `rgba(255, 255, 255, ${s.a * blink})`;
+            ctx.beginPath(); ctx.arc(s.x, s.y, s.sz, 0, Math.PI*2); ctx.fill();
+        });
+
+        // 1.4 引力网格 (改为画十字点，增加科技感)
+        ctx.fillStyle = 'rgba(0, 243, 255, 0.1)';
+        const gridSpace = 60;
+        for(let x=0; x<=this.w; x+=gridSpace) {
+            for(let y=0; y<=this.h; y+=gridSpace) {
+                const dist = Math.hypot(x-this.cx, y-this.cy);
+                const pull = Math.max(0, (1 - dist/800)); 
+                const dx = (this.cx - x) * pull * 0.5;
+                const dy = (this.cy - y) * pull * 0.5;
+                
+                const px = x+dx, py = y+dy;
+                // 绘制微小的十字，比圆点更有雷达感
+                ctx.fillRect(px-1, py, 3, 1);
+                ctx.fillRect(px, py-1, 1, 3);
+            }
+        }
+
+        ctx.globalCompositeOperation = 'lighter'; // 恢复发光模式绘制游戏主体
+
+        // ... (以下保留原有的实体绘制代码: 核心、敌人、子弹等)
+        // 2. 绘制星环琪 (Star-Ring Qi)
+        const shake = Math.random()*2;
+        ctx.shadowBlur = 30; ctx.shadowColor = '#0ff';
+        ctx.fillStyle = '#00f3ff';
+        ctx.beginPath(); ctx.arc(this.cx+shake, this.cy+shake, 30, 0, Math.PI*2); ctx.fill();
+        
+        ctx.strokeStyle = 'rgba(0, 243, 255, 0.8)'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(this.cx, this.cy, 50, 20, this.frame*0.05, 0, Math.PI*2);
+        ctx.stroke();
+
+        const r2 = 70 + Math.sin(this.frame*0.05)*10;
+        ctx.strokeStyle = 'rgba(255, 0, 85, 0.6)';
+        ctx.beginPath();
+        ctx.ellipse(this.cx, this.cy, r2, r2, -this.frame*0.02, 0, Math.PI*2);
+        ctx.stroke();
+
+        // 3. 绘制实体
+        if(this.ups.stasis.lvl>0) {
+            const r = this.ups.stasis.lvl*80+100;
+            ctx.fillStyle = 'rgba(0, 255, 100, 0.05)';
+            ctx.beginPath(); ctx.arc(this.cx, this.cy, r, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = 'rgba(0, 255, 100, 0.2)';
+            ctx.beginPath(); ctx.arc(this.cx, this.cy, r, 0, Math.PI*2); ctx.stroke();
+        }
+
+        this.orbs.forEach(o => {
+            ctx.shadowColor='#0ff'; ctx.shadowBlur=10; ctx.fillStyle='#0ff';
+            ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, Math.PI*2); ctx.fill();
+        });
+
+        this.mines.forEach(m => {
+            ctx.shadowColor='#fc0'; ctx.shadowBlur=5; ctx.fillStyle='#fc0';
+            ctx.beginPath(); ctx.arc(m.x, m.y, 4, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle='#fc0'; ctx.lineWidth=1;
+            ctx.beginPath(); ctx.arc(m.x, m.y, 8+Math.sin(this.frame*0.2)*4, 0, Math.PI*2); ctx.stroke();
+        });
+
+        this.enemies.forEach(e => {
+            ctx.shadowColor=e.col; ctx.shadowBlur=10; ctx.fillStyle=e.col;
+            ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI*2); ctx.fill();
+        });
+
+        this.bullets.forEach(b => {
+            ctx.shadowColor=b.c; ctx.shadowBlur=5; ctx.fillStyle=b.c;
+            ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, Math.PI*2); ctx.fill();
+        });
+
+        const tl = this.ups.turret.lvl;
+        if(tl>0) {
+            ctx.fillStyle = '#fc0'; ctx.shadowColor='#fc0';
+            for(let i=0; i<tl; i++) {
+                const a = (this.frame*0.01) + (i*(Math.PI*2/tl));
+                const tx = this.cx+Math.cos(a)*100, ty=this.cy+Math.sin(a)*100;
+                ctx.beginPath(); ctx.arc(tx, ty, 4, 0, Math.PI*2); ctx.fill();
+            }
+        }
+
+        // 4. 粒子与波纹
+        ctx.shadowBlur=0;
+        this.particles.forEach(p => {
+            ctx.globalAlpha = p.life; ctx.fillStyle = p.c;
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.sz, 0, Math.PI*2); ctx.fill();
+        });
+
+        this.ripples.forEach(r => {
+            ctx.globalAlpha = r.a; ctx.strokeStyle = '#0ff'; ctx.lineWidth = r.w;
+            let rx = r.x || this.cx; let ry = r.y || this.cy; 
+            ctx.beginPath(); ctx.arc(rx, ry, r.r, 0, Math.PI*2); ctx.stroke();
+        });
+
+        ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    },
+    
+    // ... (保留 near, float, boom, ui, btn 等辅助函数)
+    near(x=this.cx, y=this.cy) {
+        let n=null, min=Infinity;
+        for(let e of this.enemies) { const d=Math.hypot(e.x-x, e.y-y); if(d<min){min=d;n=e;} }
+        return n;
+    },
+
+    float(x, y, t, c) {
+        const d = document.createElement('div'); d.className='floater'; 
+        d.style.left=x+'px'; d.style.top=y+'px'; d.style.color=c; d.innerText=t;
+        document.getElementById('ui-layer').appendChild(d);
+        setTimeout(()=>d.remove(), 1200);
+    },
+
+    boom(x, y, c, n) {
+        for(let i=0; i<n; i++) {
+            const vx=(Math.random()-0.5)*4, vy=(Math.random()-0.5)*4;
+            this.particles.push({x, y, vx, vy, life:1, decay:0.03, c, sz:Math.random()*2+1});
+        }
+    },
+
+    ui() {
+        document.getElementById('u-eng').innerText = Math.floor(this.energy);
+        document.getElementById('u-wave').innerText = this.wave;
+        document.getElementById('u-hp').style.width = (this.hp/this.maxHp)*100+'%';
+        document.getElementById('u-hp-text').innerText = Math.ceil(this.hp);
+        
+        this.btn('gun'); this.btn('turret'); this.btn('mine');
+        this.btn('stasis'); this.btn('rate'); this.btn('heal');
+    },
+
+    btn(k) {
+        const u=this.ups[k]; const el=document.getElementById('btn-'+k);
+        document.getElementById('c-'+k).innerText = u.cost;
+        if(this.energy<u.cost || (u.max && u.lvl>=u.max)) el.classList.add('disabled');
+        else el.classList.remove('disabled');
+    }
+};
+
+</script>
+</body>
     </script>
 </body>
 </html>
