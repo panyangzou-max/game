@@ -3,370 +3,518 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>墨染癫途：磁带未来版</title>
-    <link href="https://fonts.googleapis.com/css2?family=VT323&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    <title>墨染癫途：磁带未来 V2.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* 磁带未来主义配色：琥珀色终端 + 深灰塑料 */
-            --screen-bg: #1a1510;
-            --terminal-amber: #ffb000;
-            --terminal-dim: #996600;
-            --plastic-case: #2b2b2b;
-            --plastic-light: #3d3d3d;
-            --plastic-dark: #1a1a1a;
-            --alert-red: #ff3333;
+            /* 32-bit 时代的精细配色：深青色 + 琥珀警报 */
+            --bg-body: #050505;
+            --case-color: #202020;
+            --screen-bg: #0a0f0f;
+            --ui-primary: #00ffcc; /* 青色荧光 */
+            --ui-dim: #005544;
+            --ui-alert: #ff3333;
+            --ui-amber: #ffcc00;
             
-            --font-term: 'VT323', monospace;
-            --font-cn: 'ZCOOL KuaiLe', cursive; 
+            --font-tech: 'Share Tech Mono', monospace;
+            --font-cn: 'ZCOOL KuaiLe', cursive;
         }
 
         body {
-            background-color: #111;
+            background-color: var(--bg-body);
             margin: 0;
             height: 100vh;
             overflow: hidden;
-            color: var(--terminal-amber);
-            font-family: var(--font-term), sans-serif;
+            font-family: var(--font-tech);
+            color: var(--ui-primary);
             display: flex;
             justify-content: center;
             align-items: center;
+            user-select: none;
         }
 
-        /* --- 物理外壳 (The Casing) --- */
+        /* --- 物理外壳升级 --- */
         #device-casing {
-            width: 900px;
-            max-width: 95vw;
-            height: 90vh;
-            background: var(--plastic-case);
-            border-radius: 20px;
-            padding: 20px;
-            box-shadow: 
-                inset 2px 2px 5px var(--plastic-light),
-                inset -2px -2px 5px var(--plastic-dark),
-                0 0 50px rgba(0,0,0,0.8);
-            position: relative;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* 装饰螺丝 */
-        .screw {
-            width: 10px; height: 10px;
-            background: #111;
-            border-radius: 50%;
-            position: absolute;
-            box-shadow: inset 1px 1px 2px #555;
-        }
-        .tl { top: 10px; left: 10px; }
-        .tr { top: 10px; right: 10px; }
-        .bl { bottom: 10px; left: 10px; }
-        .br { bottom: 10px; right: 10px; }
-
-        /* --- 屏幕区域 (The Screen) --- */
-        #crt-screen {
-            flex: 1;
-            background-color: var(--screen-bg);
-            border-radius: 60px / 20px; /* 曲面屏模拟 */
-            border: 2px solid #000;
-            position: relative;
-            overflow: hidden;
-            box-shadow: inset 0 0 80px rgba(0,0,0,0.7);
-            padding: 30px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* 扫描线与发光特效 */
-        #crt-screen::before {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 4px, 3px 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-        
-        /* 琥珀色辉光 */
-        .glow-text {
-            text-shadow: 0 0 5px var(--terminal-amber), 0 0 10px var(--terminal-dim);
-        }
-
-        /* --- 游戏布局 --- */
-        /* 上半部分：ASCII 视窗 */
-        #visual-panel {
-            flex: 1;
-            border: 2px solid var(--terminal-dim);
-            margin-bottom: 20px;
-            position: relative;
-            overflow: hidden;
-            background: repeating-linear-gradient(
-                0deg,
-                rgba(255, 176, 0, 0.05),
-                rgba(255, 176, 0, 0.05) 1px,
-                transparent 1px,
-                transparent 2px
-            );
-        }
-
-        .ascii-art {
-            font-size: 14px;
-            line-height: 14px;
-            white-space: pre;
-            position: absolute;
-            left: 50%; top: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            opacity: 0.9;
-        }
-
-        /* 下半部分：UI 控制台 */
-        #control-panel {
-            flex: 1;
-            display: flex;
-            gap: 20px;
-        }
-
-        #log-display {
-            flex: 2;
-            font-size: 1.4rem;
-            line-height: 1.6;
-            font-family: var(--font-cn); /* 中文用这种字体更有符咒感 */
-            overflow-y: auto;
-            border-right: 2px dashed var(--terminal-dim);
-            padding-right: 15px;
-        }
-        
-        /* 滚动条样式 */
-        #log-display::-webkit-scrollbar { width: 8px; }
-        #log-display::-webkit-scrollbar-thumb { background: var(--terminal-dim); }
-
-        #action-menu {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        /* 机械按钮样式 */
-        .tape-btn {
-            background: linear-gradient(to bottom, #444, #333);
-            border: 2px solid #111;
-            border-top: 2px solid #555;
-            color: #ddd;
+            width: 960px;
+            height: 600px;
+            background: var(--case-color);
+            border-radius: 10px;
             padding: 15px;
-            font-family: var(--font-term);
-            font-size: 1.2rem;
-            text-transform: uppercase;
-            cursor: pointer;
-            box-shadow: 0 4px 0 #111;
-            transition: all 0.1s;
-            text-align: center;
+            box-shadow: 
+                0 0 0 2px #333,
+                0 20px 50px rgba(0,0,0,0.8);
             position: relative;
+            display: flex;
+            flex-direction: column;
         }
 
-        .tape-btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 #111;
-            background: #222;
-        }
-
-        .tape-btn::after {
-            content: '';
-            position: absolute;
-            top: 5px; right: 5px;
-            width: 5px; height: 5px;
-            background: #ffb000;
-            border-radius: 50%;
+        /* 顶部装饰条 */
+        .deco-bar {
+            height: 10px;
+            background: repeating-linear-gradient(
+                90deg, 
+                #333 0, 
+                #333 10px, 
+                transparent 10px, 
+                transparent 20px
+            );
+            margin-bottom: 10px;
             opacity: 0.5;
         }
-        .tape-btn:hover::after {
-            opacity: 1;
-            box-shadow: 0 0 5px #ffb000;
+
+        /* --- 屏幕区域 --- */
+        #screen-frame {
+            flex: 1;
+            background: var(--screen-bg);
+            border: 1px solid #333;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            border-radius: 4px;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.9);
         }
 
-        /* 状态栏：贴在屏幕下方的贴纸风格 */
-        #sticker-label {
+        /* 扫描线滤镜 (更细腻) */
+        #screen-frame::after {
+            content: " ";
             position: absolute;
-            bottom: 40px; right: 50px;
-            background: #ddd;
-            color: #000;
-            padding: 5px 10px;
-            font-family: sans-serif;
-            font-weight: bold;
-            font-size: 0.8rem;
-            transform: rotate(-2deg);
-            box-shadow: 2px 2px 2px rgba(0,0,0,0.5);
-            z-index: 20;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 2px;
+            pointer-events: none;
+            z-index: 99;
         }
 
-        /* 故障文字 */
-        .glitch-text {
-            display: inline-block;
-            animation: text-shake 0.3s infinite;
-            color: var(--alert-red);
-            text-shadow: 1px 0 #000;
+        /* --- 左侧：32bit 可视化扫描仪 --- */
+        #visual-panel {
+            width: 40%;
+            border-right: 1px solid var(--ui-dim);
+            position: relative;
+            background: radial-gradient(circle at 50% 50%, #001a1a 0%, #000 100%);
         }
-        @keyframes text-shake {
-            0% { transform: translate(1px, 1px); }
-            50% { transform: translate(-1px, -1px); }
-            100% { transform: translate(1px, -1px); }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
+
+        .scan-overlay {
+            position: absolute;
+            top: 10px; left: 10px;
+            font-size: 10px;
+            color: var(--ui-dim);
+        }
+
+        /* --- 右侧：数据终端 --- */
+        #data-panel {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #header-status {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--ui-dim);
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: var(--ui-amber);
+        }
+
+        #text-log {
+            flex: 1;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            font-family: var(--font-cn);
+            color: #eee;
+            text-shadow: 0 0 2px rgba(255,255,255,0.3);
+            overflow-y: auto;
+        }
+
+        .highlight { color: var(--ui-primary); font-weight: bold; }
+        .danger { color: var(--ui-alert); animation: pulse 1s infinite; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* --- 交互按钮区域 --- */
+        #interactions {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 双列布局 */
+            gap: 10px;
+        }
+
+        .option-btn {
+            background: rgba(0, 255, 204, 0.05);
+            border: 1px solid var(--ui-dim);
+            color: var(--ui-primary);
+            padding: 10px 15px;
+            font-family: var(--font-tech);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .option-btn:hover {
+            background: var(--ui-primary);
+            color: #000;
+            box-shadow: 0 0 15px var(--ui-primary);
+        }
+        
+        /* 禁用状态 */
+        .option-btn.locked {
+            opacity: 0.3;
+            cursor: not-allowed;
+            border-color: #333;
+            color: #555;
+        }
+
+        /* 启动遮罩 */
+        #start-overlay {
+            position: absolute;
+            top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 200;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: var(--ui-primary);
+        }
+        #start-btn {
+            padding: 15px 40px;
+            border: 2px solid var(--ui-primary);
+            background: transparent;
+            color: var(--ui-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            font-family: var(--font-tech);
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink { 50% { border-color: transparent; color: transparent; } }
 
     </style>
 </head>
 <body>
 
     <div id="device-casing">
-        <div class="screw tl"></div><div class="screw tr"></div>
-        <div class="screw bl"></div><div class="screw br"></div>
-
-        <div id="crt-screen" class="glow-text">
+        <div class="deco-bar"></div>
+        <div id="screen-frame">
             
+            <div id="start-overlay">
+                <div>SYSTEM STANDBY</div>
+                <br>
+                <button id="start-btn">INITIALIZE</button>
+            </div>
+
             <div id="visual-panel">
-                <div class="ascii-art" id="ascii-canvas">
-                    </div>
-            </div>
-
-            <div id="control-panel">
-                <div id="log-display">
-                    系统启动中...<br>
-                    加载认知模块... [OK]<br>
-                    加载恐惧抑制器... [ERROR]<br>
-                    --------------------
+                <div class="scan-overlay">
+                    SCAN_MODE: BIO_METRIC<br>
+                    TARGET: UNKNOWN
                 </div>
-                <div id="action-menu">
-                    </div>
+                <canvas id="viz-canvas"></canvas>
             </div>
 
-        </div>
-        
-        <div id="sticker-label">
-            PROPERTY OF ASYLUM<br>
-            NO: 999-X
+            <div id="data-panel">
+                <div id="header-status">
+                    <span>SANITY: <span id="san-val">100%</span></span>
+                    <span>INV: <span id="inv-val">无</span></span>
+                </div>
+                
+                <div id="text-log">
+                    等待系统初始化...
+                </div>
+
+                <div id="interactions">
+                    </div>
+            </div>
         </div>
     </div>
 
     <script>
-        // --- 游戏数据 ---
-        const gameState = {
-            san: 100,
-            inventory: [],
+        // --- 1. 程序化音频引擎 (AudioEngine) ---
+        // 这种方式不需要加载任何MP3文件，直接用代码生成声音
+        const AudioEngine = {
+            ctx: null,
+            bgmOscillators: [],
+            isMuted: false,
+
+            init: function() {
+                window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+            },
+
+            // 播放点击音效 (清脆的电子音)
+            playClick: function() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.1);
+                
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            },
+
+            // 播放恐怖氛围音 (低频 Drone)
+            startAmbience: function() {
+                if (!this.ctx) return;
+                // 创建两个低频振荡器，产生不和谐的嗡嗡声
+                const osc1 = this.ctx.createOscillator();
+                const osc2 = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc1.type = 'sawtooth';
+                osc1.frequency.value = 50; // 50Hz 低音
+                osc2.type = 'sine';
+                osc2.frequency.value = 52; // 产生拍频 (Beating)
+
+                gain.gain.value = 0.05; // 音量很小
+
+                // 添加滤波器让声音更闷
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 400;
+
+                osc1.connect(filter);
+                osc2.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc1.start();
+                osc2.start();
+                this.bgmOscillators = [osc1, osc2];
+            }
         };
 
-        // ASCII 素材库 (医生、护士、金丹)
-        const arts = {
-            doctor: `
-   .---.
-  ( O O )  < [I AM A BEAR]
-   | = |
-  /|   |\\  // SAW
- / |___| \\//
-   |   |
-            `,
-            doctor_horror: `
-   /X X\\
-  ( @ @ )  < [RUN]
-   \\ ^ /
-   /|||\\
-  //|||\\\\
-            `,
-            nurse: `
-    ___
-   /   \\
-  | o o |
-   \\ ~ /
-   /   \\
-  (     )
-            `
+        // --- 2. 视觉引擎 (Canvas Visualization) ---
+        const VisualEngine = {
+            canvas: document.getElementById('viz-canvas'),
+            ctx: document.getElementById('viz-canvas').getContext('2d'),
+            targetColor: '#00ffcc',
+            scanLine: 0,
+            mode: 'normal', // normal, danger, glitch
+
+            resize: function() {
+                this.canvas.width = this.canvas.parentElement.clientWidth;
+                this.canvas.height = this.canvas.parentElement.clientHeight;
+            },
+
+            // 绘制一帧
+            draw: function() {
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                const ctx = this.ctx;
+
+                // 清空并加一点残影
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.fillRect(0, 0, w, h);
+
+                // 绘制网格
+                ctx.strokeStyle = 'rgba(0, 255, 204, 0.1)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                for(let i=0; i<w; i+=40) { ctx.moveTo(i, 0); ctx.lineTo(i, h); }
+                for(let j=0; j<h; j+=40) { ctx.moveTo(0, j); ctx.lineTo(w, j); }
+                ctx.stroke();
+
+                // 绘制中间的物体 (模拟 3D 扫描)
+                ctx.save();
+                ctx.translate(w/2, h/2);
+                
+                // 旋转动画
+                const time = Date.now() * 0.001;
+                ctx.rotate(time * 0.5);
+
+                if (this.mode === 'danger') {
+                    ctx.strokeStyle = '#ff3333';
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#ff3333';
+                } else {
+                    ctx.strokeStyle = this.targetColor;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = this.targetColor;
+                }
+                
+                // 画几个圈
+                ctx.beginPath();
+                ctx.arc(0, 0, 50 + Math.sin(time*2)*10, 0, Math.PI*2);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.arc(0, 0, 80, 0 + time, Math.PI + time);
+                ctx.stroke();
+
+                ctx.restore();
+
+                // 扫描线
+                this.scanLine = (this.scanLine + 2) % h;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.fillRect(0, this.scanLine, w, 2);
+
+                requestAnimationFrame(() => this.draw());
+            }
+        };
+
+        // --- 3. 游戏逻辑 ---
+        const gameState = {
+            san: 100,
+            inventory: new Set(), // 使用 Set 防止重复
+            flags: {}
         };
 
         const scenes = {
             'start': {
-                text: "检测到生命体征...<br>位置：第4号手术台。<br><br>左侧检测到高能反应 [医生]。<br>右侧检测到灵体波动 [护士]。<br><br>医生手里拿着一颗<span class='glitch-text'>[眼球]</span>，他称之为‘金丹’。",
-                art: arts.doctor,
+                text: "系统自检完成。<br>认知模块加载中...<br><br>你醒了。这是一个冰冷的手术室。<br>左侧检测到高能反应：<span class='highlight'>[主治医师]</span>。<br>他手里拿着一颗正在跳动的<span class='danger'>[眼球]</span>，并称之为‘金丹’。",
+                mode: 'normal',
                 choices: [
                     { text: "大声呼救", next: 'scream' },
-                    { text: "询问保修期 (幽默)", next: 'humor' },
-                    { text: "扫描物体结构 (烧脑)", next: 'analyze' }
+                    { text: "幽默：询问保修期", next: 'humor' },
+                    { text: "分析：扫描物体结构", next: 'analyze' }
                 ]
             },
             'scream': {
-                text: "警告：患者情绪失控。<br>执行强制镇静程序...<br><br>视线变黑。<br>SYSTEM HALTED.",
-                art: arts.doctor_horror,
+                text: "警告：心率过高。<br>医生叹了口气：“又一个废品。”<br>视线变黑。<br>BAD END: 废弃处理。",
+                mode: 'danger',
                 choices: [
                     { text: "重启系统", next: 'start' }
                 ]
             },
             'humor': {
-                text: "认知滤网重置...<br>目标 [医生] 转化为 [友善单位]。<br><br>医生挠了挠头：“亲，终身保修哦。”<br>你吞下了荔枝味的金丹。<br>SAN值 -20 (快乐)",
-                art: arts.doctor, // 这里其实可以换个更可爱的ASCII
+                text: "你开启了[幽默滤镜]。<br>恐怖的医生变成了一只棕熊玩偶。<br>你吃下了‘荔枝味’的金丹。<br><br>虽然SAN值下降，但你活下来了。",
+                mode: 'normal',
+                action: () => { gameState.san -= 20; updateStatus(); },
                 choices: [
-                    { text: "感觉良好...", next: 'start' }
+                    { text: "进入走廊", next: 'corridor' }
                 ]
             },
             'analyze': {
-                text: "分析模式开启...<br>警告：理智流失。<br><br>解析目标物体...<br>>> 结果：活体视神经组织。<br>>> 隐藏信息：摩尔斯电码 'CUT THE RED WIRE'。",
-                art: arts.doctor_horror,
+                text: "分析中...<br>解析出摩尔斯电码：'CUT THE RED WIRE'。<br>你发现医生手腕上有一根裸露的红线。",
+                mode: 'danger',
                 choices: [
-                    { text: "切断红线", next: 'win' },
+                    { text: "切断红线", next: 'cut_wire' },
                     { text: "放弃", next: 'scream' }
                 ]
             },
-            'win': {
-                text: "执行指令：CUT_WIRE。<br>目标解体。<br>获得物品：[真视之眼]。<br><br>第一章：测试结束。",
-                art: arts.nurse,
+            'cut_wire': {
+                text: "目标解体。<br>获得关键物品：<span class='highlight'>[真视之眼]</span>。<br>你不仅看到了真相，还拥有了打破幻象的能力。",
+                mode: 'normal',
+                action: () => { gameState.inventory.add('真视之眼'); updateStatus(); },
                 choices: [
-                    { text: "重新开始", next: 'start' }
+                    { text: "离开手术室", next: 'corridor' }
+                ]
+            },
+            'corridor': {
+                text: "你来到了走廊。<br>前面有一道密码门，上面写着‘非疯癫者禁入’。<br>门锁似乎需要某种特殊的[眼睛]才能识别。",
+                mode: 'normal',
+                choices: [
+                    { 
+                        text: "使用[真视之眼]开门", 
+                        next: 'secret_room',
+                        condition: () => gameState.inventory.has('真视之眼') 
+                    },
+                    { text: "强行撞门", next: 'scream' },
+                    { text: "装疯卖傻混过去", next: 'act_crazy' }
+                ]
+            },
+            'secret_room': {
+                text: "门开了。<br>恭喜进入隐藏区域：[开发者后台]。<br>这里是世界的尽头。",
+                mode: 'normal',
+                choices: [
+                    { text: "结束演示", next: 'start' }
+                ]
+            },
+            'act_crazy': {
+                text: "你学着疯子的样子在地上爬行。<br>门开了，但你也失去了身为人的尊严。<br>SAN值 -50。",
+                mode: 'danger',
+                action: () => { gameState.san -= 50; updateStatus(); },
+                choices: [
+                    { text: "继续爬行...", next: 'secret_room' }
                 ]
             }
         };
 
-        // --- 核心逻辑 ---
+        // --- 逻辑控制器 ---
+        const logEl = document.getElementById('text-log');
+        const btnContainer = document.getElementById('interactions');
 
-        const logEl = document.getElementById('log-display');
-        const actionMenu = document.getElementById('action-menu');
-        const artEl = document.getElementById('ascii-canvas');
+        function updateStatus() {
+            document.getElementById('san-val').innerText = gameState.san + "%";
+            document.getElementById('inv-val').innerText = Array.from(gameState.inventory).join(', ') || "无";
+        }
 
         function typeWriter(html, callback) {
-            logEl.innerHTML = "";
-            // 简单的逐字显示模拟，为了支持HTML标签，这里简化处理，直接显示
-            // 真实的磁带风格通常是光标闪烁逐字出
-            logEl.innerHTML = html; 
+            logEl.innerHTML = html; // 简单替换，如需打字机效果可复用之前的逻辑
             if(callback) callback();
         }
 
         function loadScene(id) {
             const scene = scenes[id];
             
-            // 更新画面 (ASCII)
-            if(scene.art) {
-                artEl.innerText = scene.art;
-            }
+            // 切换视觉模式
+            VisualEngine.mode = scene.mode;
 
-            // 更新文本
+            // 执行附带动作
+            if(scene.action) scene.action();
+
             typeWriter(scene.text, () => {
-                // 生成机械按钮
-                actionMenu.innerHTML = "";
+                btnContainer.innerHTML = "";
                 scene.choices.forEach(choice => {
+                    // 检查条件
+                    let isLocked = false;
+                    if (choice.condition && !choice.condition()) {
+                        isLocked = true;
+                    }
+
                     const btn = document.createElement('div');
-                    btn.className = 'tape-btn';
-                    btn.innerText = choice.text;
-                    btn.onclick = () => {
-                        // 简单的按钮下压音效感（视觉）
-                        setTimeout(() => loadScene(choice.next), 150);
-                    };
-                    actionMenu.appendChild(btn);
+                    btn.className = `option-btn ${isLocked ? 'locked' : ''}`;
+                    
+                    // 如果有条件，在按钮文本上提示
+                    let btnText = choice.text;
+                    if (isLocked) btnText += " [条件未满足]";
+
+                    btn.innerHTML = `> ${btnText}`;
+                    
+                    if (!isLocked) {
+                        btn.onclick = () => {
+                            AudioEngine.playClick();
+                            loadScene(choice.next);
+                        };
+                    }
+                    btnContainer.appendChild(btn);
                 });
             });
         }
 
-        // 初始化
-        setTimeout(() => {
+        // 初始化启动
+        document.getElementById('start-btn').onclick = () => {
+            // 隐藏遮罩
+            document.getElementById('start-overlay').style.display = 'none';
+            // 初始化音频
+            AudioEngine.init();
+            AudioEngine.startAmbience();
+            AudioEngine.playClick();
+            // 初始化视觉
+            VisualEngine.resize();
+            VisualEngine.draw();
+            // 加载场景
             loadScene('start');
-        }, 1000); // 模拟开机延迟
+        };
+
+        window.onresize = () => VisualEngine.resize();
 
     </script>
 </body>
