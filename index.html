@@ -3,22 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PROJECT_ECHO // LOG_ENTRY</title>
+    <title>PROJECT_QI // SINGULARITY_LOG</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* 奇点风格配色：冷白、深渊黑、警报红 */
+            /* 极简主义科技配色 */
             --bg-deep: #050505;
             --ui-white: #e0e0e0;
             --ui-dim: #4a4a4a;
-            --accent-cyan: #00f0ff;
-            --accent-red: #ff2a2a;
+            
+            --cyan: #00f0ff;    /* 能量/友军 */
+            --red: #ff2a2a;     /* 威胁 */
+            --purple: #bd00ff;  /* 激光 */
+            --gold: #ffd700;    /* 炮塔 */
             
             --font-head: 'Orbitron', sans-serif;
             --font-body: 'Rajdhani', sans-serif;
         }
 
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; user-select: none; }
 
         body {
             margin: 0;
@@ -30,573 +33,748 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            user-select: none;
+            cursor: crosshair; /* 准星光标 */
         }
 
-        /* 背景：动态星尘/网格 */
-        #bg-canvas {
+        /* 游戏层级 */
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #bg-layer { z-index: 0; opacity: 0.4; }
+        #game-layer { z-index: 1; }
+        #ui-layer { z-index: 10; position: absolute; width: 100%; height: 100%; pointer-events: none; }
+
+        /* HUD 界面 */
+        .hud-panel {
             position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 0;
-            opacity: 0.3;
+            pointer-events: auto; /* 允许点击UI */
+            padding: 20px;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
-        /* --- 主界面容器 (悬浮玻璃风格) --- */
-        #interface-container {
-            position: relative;
-            z-index: 10;
-            width: 1200px;
-            max-width: 95vw;
-            height: 800px;
-            max-height: 90vh;
-            display: flex;
-            background: rgba(10, 10, 10, 0.85);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        .top-left { top: 0; left: 0; }
+        .top-center { 
+            top: 20px; left: 50%; 
+            transform: translateX(-50%);
+            display: flex; flex-direction: column; align-items: center;
         }
-
-        /* 左侧：奇点观测窗 (70%) */
-        #visual-sector {
-            flex: 7;
-            position: relative;
-            overflow: hidden;
-            border-right: 1px solid rgba(255,255,255,0.1);
-        }
-
-        /* 核心视觉 Canvas */
-        #echo-canvas {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* 视觉覆盖层 UI */
-        .overlay-ui {
-            position: absolute;
-            pointer-events: none;
-            font-size: 10px;
-            letter-spacing: 2px;
-            color: rgba(255,255,255,0.5);
-        }
-        .tl { top: 20px; left: 20px; }
-        .br { bottom: 20px; right: 20px; text-align: right; }
         
-        .status-badge {
-            border: 1px solid var(--accent-cyan);
-            color: var(--accent-cyan);
-            padding: 2px 6px;
-            font-size: 9px;
-            margin-right: 10px;
-        }
+        /* 状态数值 */
+        .label { font-size: 10px; color: var(--ui-dim); letter-spacing: 2px; text-transform: uppercase; }
+        .value { font-family: var(--font-head); font-size: 28px; letter-spacing: 2px; }
+        .cyan { color: var(--cyan); text-shadow: 0 0 10px rgba(0, 240, 255, 0.5); }
+        .red { color: var(--red); }
 
-        /* 右侧：数据日志 (30%) */
-        #log-sector {
-            flex: 3;
-            display: flex;
-            flex-direction: column;
-            padding: 0;
-            background: rgba(0,0,0,0.5);
-        }
-
-        #log-header {
-            height: 60px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            justify-content: space-between;
-        }
-
-        h1 {
-            font-family: var(--font-head);
-            font-size: 14px;
-            margin: 0;
-            letter-spacing: 3px;
-        }
-
-        /* 滚动日志区 */
-        #log-feed {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            font-size: 16px;
-            line-height: 1.6;
-        }
-
-        /* 隐藏滚动条但保留功能 */
-        #log-feed::-webkit-scrollbar { width: 2px; }
-        #log-feed::-webkit-scrollbar-thumb { background: var(--ui-dim); }
-
-        .entry {
-            margin-bottom: 25px;
-            opacity: 0;
-            animation: fadeIn 0.5s forwards;
-            border-left: 1px solid var(--ui-dim);
-            padding-left: 15px;
-        }
-        @keyframes fadeIn { to { opacity: 1; } }
-
-        .timestamp {
-            font-size: 10px;
-            color: var(--ui-dim);
-            display: block;
-            margin-bottom: 5px;
-            font-family: var(--font-head);
-        }
-
-        .redacted {
-            background: var(--ui-white);
-            color: var(--ui-white);
-            padding: 0 2px;
-            cursor: help;
-        }
-        .redacted:hover {
-            background: transparent;
-            color: var(--ui-white);
-        }
-
-        /* 交互区域 */
-        #interaction-panel {
-            padding: 20px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        /* 极简按钮 */
-        button {
-            background: transparent;
-            border: 1px solid var(--ui-dim);
-            color: var(--ui-white);
-            padding: 12px;
-            font-family: var(--font-head);
-            font-size: 10px;
-            letter-spacing: 2px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-            text-align: left;
+        /* 血条 */
+        .hp-container {
+            width: 400px; height: 4px;
+            background: rgba(255,255,255,0.1);
+            margin-top: 5px;
             position: relative;
             overflow: hidden;
         }
-
-        button:hover {
-            border-color: var(--accent-cyan);
-            background: rgba(0, 240, 255, 0.05);
-            padding-left: 20px;
+        .hp-fill {
+            height: 100%; width: 100%;
+            background: var(--red);
+            box-shadow: 0 0 15px var(--red);
+            transition: width 0.2s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
-        button::after {
-            content: '';
+        /* 升级菜单 (右侧悬浮) */
+        #upgrade-menu {
             position: absolute;
-            top: 0; left: 0; width: 0%; height: 100%;
-            background: var(--accent-cyan);
-            transition: width 0.3s;
-            z-index: -1;
-            opacity: 0.1;
-        }
-        button:hover::after { width: 100%; }
-
-        button.danger:hover {
-            border-color: var(--accent-red);
-            color: var(--accent-red);
-        }
-
-        /* 音频波形条 */
-        #audio-vis {
-            height: 2px;
-            width: 100%;
-            background: transparent;
+            right: 0; top: 0; bottom: 0;
+            width: 320px;
+            background: linear-gradient(90deg, transparent 0%, rgba(10,10,10,0.95) 20%);
+            border-left: 1px solid rgba(255,255,255,0.05);
+            padding: 30px;
             display: flex;
-            align-items: center;
+            flex-direction: column;
             justify-content: center;
-            gap: 2px;
-            margin-top: 10px;
-            opacity: 0.3;
+            gap: 15px;
+            pointer-events: auto;
         }
-        .bar { width: 2px; background: white; height: 2px; }
 
-        /* 故障特效类 */
-        .glitch-text {
-            animation: text-glitch 2s infinite;
+        h2 {
+            font-family: var(--font-head);
+            font-size: 16px;
+            color: var(--ui-white);
+            border-bottom: 1px solid var(--ui-dim);
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
         }
-        @keyframes text-glitch {
-            0% { transform: translate(0); }
-            2% { transform: translate(-2px, 1px); }
-            4% { transform: translate(2px, -1px); }
-            6% { transform: translate(0); }
-            100% { transform: translate(0); }
+
+        /* 升级卡片 */
+        .card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
         }
+        .card:hover:not(.disabled) {
+            background: rgba(0, 240, 255, 0.05);
+            border-color: var(--cyan);
+            transform: translateX(-5px);
+        }
+        .card.disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .card-title { font-family: var(--font-head); font-size: 12px; color: var(--cyan); display: flex; justify-content: space-between; }
+        .card-lvl { background: rgba(0,0,0,0.5); padding: 2px 5px; font-size: 9px; border-radius: 2px; color: #fff; }
+        .card-desc { font-size: 11px; color: #888; margin-top: 5px; line-height: 1.4; }
+        .card-cost { margin-top: 8px; font-size: 12px; color: var(--gold); font-weight: bold; text-align: right; }
+
+        /* 屏幕震动 */
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+
+        /* 启动界面 */
+        #splash-screen {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: rgba(5,5,5,0.98);
+            z-index: 100; pointer-events: auto;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+        .btn-start {
+            margin-top: 40px; padding: 15px 60px;
+            background: transparent; color: var(--cyan);
+            border: 1px solid var(--cyan);
+            font-family: var(--font-head); font-size: 18px; letter-spacing: 4px;
+            cursor: pointer; transition: 0.3s;
+        }
+        .btn-start:hover { background: var(--cyan); color: #000; box-shadow: 0 0 40px var(--cyan); }
+
+        /* 飘字 */
+        .floater { position: absolute; font-family: var(--font-head); font-weight: bold; pointer-events: none; animation: floatUp 0.8s forwards; font-size: 14px; text-shadow: 0 0 5px currentColor; }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-30px) scale(1.2); } }
 
     </style>
 </head>
 <body>
 
-    <canvas id="bg-canvas"></canvas>
+    <canvas id="bg-layer"></canvas>
+    <canvas id="game-layer"></canvas>
 
-    <div id="interface-container">
+    <div id="ui-layer">
         
-        <div id="visual-sector">
-            <div class="overlay-ui tl">
-                <span class="status-badge">ONLINE</span>
-                <span>OBSERVATION_DECK_04</span>
-            </div>
-            <div class="overlay-ui br">
-                <div>ECHO_RESONANCE: <span id="res-val">0.00%</span></div>
-                <div>COORDINATES: NULL</div>
-            </div>
-            
-            <canvas id="echo-canvas"></canvas>
+        <div class="hud-panel top-left">
+            <div class="label">ENERGY_RESERVE</div>
+            <div class="value cyan"><span id="energy-display">0</span></div>
+            <div class="label" style="margin-top:15px">THREAT_LEVEL</div>
+            <div class="value"><span id="wave-display">1</span></div>
         </div>
 
-        <div id="log-sector">
-            <div id="log-header">
-                <h1>PROJECT_ECHO</h1>
-                <div style="font-size: 10px; color:#666;">LOG_ID: #9921</div>
+        <div class="hud-panel top-center">
+            <div class="label">CORE_INTEGRITY</div>
+            <div class="hp-container">
+                <div class="hp-fill" id="hp-bar"></div>
+            </div>
+            <div class="label" style="margin-top:5px; text-align:center;"><span id="hp-text">100</span>%</div>
+        </div>
+
+        <div id="upgrade-menu">
+            <h2>SYSTEM CONFIG</h2>
+
+            <div class="card" id="card-gun" onclick="Game.upgrade('gun')">
+                <div class="card-title">
+                    PRIMARY_LASER
+                    <span class="card-lvl">LV <span id="lvl-gun">1</span>/5</span>
+                </div>
+                <div class="card-desc" id="desc-gun">单发速射模式</div>
+                <div class="card-cost" id="cost-gun">50</div>
             </div>
 
-            <div id="log-feed">
-                <div class="entry">
-                    <span class="timestamp">SYS.INIT // 00:00:00</span>
-                    <p>连接建立。<br>神经同步率稳定。<br>等待音频引擎启动...</p>
+            <div class="card" id="card-turret" onclick="Game.upgrade('turret')">
+                <div class="card-title">
+                    ORBITAL_DRONE
+                    <span class="card-lvl">LV <span id="lvl-turret">0</span>/5</span>
                 </div>
+                <div class="card-desc" id="desc-turret">部署浮游攻击终端</div>
+                <div class="card-cost" id="cost-turret">100</div>
             </div>
 
-            <div id="interaction-panel">
-                <div id="audio-vis">
-                    </div>
-                <div id="btn-group" style="display:flex; flex-direction:column; gap:8px;">
-                    <button id="start-btn" onclick="Game.init()">[ INITIALIZE LINK ]</button>
+            <div class="card" id="card-rate" onclick="Game.upgrade('rate')">
+                <div class="card-title">
+                    DATA_MINING
+                    <span class="card-lvl">INF</span>
                 </div>
+                <div class="card-desc">提升能量聚合效率</div>
+                <div class="card-cost" id="cost-rate">30</div>
+            </div>
+
+            <div class="card" id="card-heal" onclick="Game.upgrade('heal')">
+                <div class="card-title">
+                    AUTO_REPAIR
+                </div>
+                <div class="card-desc">修复受损的核心架构</div>
+                <div class="card-cost" id="cost-heal">50</div>
             </div>
         </div>
     </div>
 
+    <div id="splash-screen">
+        <h1 style="font-family:var(--font-head); font-size:48px; color:#fff; letter-spacing:5px; text-shadow:0 0 30px var(--cyan);">PROJECT_QI</h1>
+        <p style="color:var(--cyan); letter-spacing:3px; font-size:12px;">SINGULARITY DEFENSE PROTOCOL</p>
+        <button class="btn-start" onclick="Game.init()">INITIALIZE</button>
+    </div>
+
     <script>
-        // --- 1. ECHO 视觉引擎 (数学几何艺术) ---
-        const EchoVisuals = {
-            canvas: document.getElementById('echo-canvas'),
-            bgCanvas: document.getElementById('bg-canvas'),
-            ctx: null, bgCtx: null,
-            w: 0, h: 0,
-            frame: 0,
-            intensity: 0, // 随音乐律动
-            state: 'idle', // idle, active, unstable
+        // --- 0. 音频合成器 (无需外部文件) ---
+        const AudioSys = {
+            ctx: null,
+            init() { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+            play(type) {
+                if(!this.ctx) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                if (type === 'bg_drone') {
+                    // 极低频背景音，仅播放一次
+                    const drone = this.ctx.createOscillator();
+                    drone.type = 'sine'; drone.frequency.value = 50;
+                    const dGain = this.ctx.createGain(); dGain.gain.value = 0.05;
+                    drone.connect(dGain).connect(this.ctx.destination);
+                    drone.start();
+                    return;
+                }
+
+                if (type === 'laser') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(800, t);
+                    osc.frequency.exponentialRampToValueAtTime(100, t+0.15);
+                    gain.gain.value = 0.05;
+                } else if (type === 'turret') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(1500, t);
+                    osc.frequency.exponentialRampToValueAtTime(500, t+0.05);
+                    gain.gain.value = 0.02;
+                } else if (type === 'hit') {
+                    osc.type = 'noise'; // 模拟噪点需 buffer，这里用 triangle 代替
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(100, t);
+                    osc.frequency.linearRampToValueAtTime(0, t+0.1);
+                    gain.gain.value = 0.1;
+                } else if (type === 'collect') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(1200, t);
+                    osc.frequency.linearRampToValueAtTime(1800, t+0.1);
+                    gain.gain.value = 0.05;
+                }
+
+                osc.connect(gain).connect(this.ctx.destination);
+                osc.start();
+                osc.stop(t + 0.2);
+            }
+        };
+
+        // --- 1. 游戏引擎 ---
+        const Game = {
+            bgCanvas: document.getElementById('bg-layer'),
+            canvas: document.getElementById('game-layer'),
+            bgCtx: null, ctx: null,
+            w: 0, h: 0, frame: 0, running: false,
+
+            // 数据
+            energy: 0,
+            hp: 100, maxHp: 100,
+            wave: 1,
+
+            // 升级配置
+            upgrades: {
+                gun: { level: 1, max: 5, cost: 50, name: "主炮" },
+                turret: { level: 0, max: 5, cost: 100, name: "浮游炮" },
+                rate: { level: 1, cost: 30, name: "采集" },
+                heal: { cost: 50, name: "修复" }
+            },
+
+            // 实体
+            orbs: [],       // 资源
+            enemies: [],    // 敌人
+            bullets: [],    // 友方投射物
+            particles: [],  // 特效粒子
+            
+            // 逻辑计时
+            lastFire: 0,
 
             init() {
-                this.ctx = this.canvas.getContext('2d');
+                AudioSys.init();
+                AudioSys.play('bg_drone');
+                document.getElementById('splash-screen').style.opacity = 0;
+                setTimeout(() => document.getElementById('splash-screen').remove(), 500);
+
                 this.bgCtx = this.bgCanvas.getContext('2d');
+                this.ctx = this.canvas.getContext('2d');
+                
                 this.resize();
                 window.addEventListener('resize', () => this.resize());
+                
+                // 鼠标交互
+                this.canvas.addEventListener('mousedown', e => this.onClick(e));
+                this.canvas.addEventListener('touchstart', e => this.onClick(e.touches[0]));
+
+                this.running = true;
                 this.loop();
+                this.updateUI();
             },
 
             resize() {
-                this.w = this.canvas.width = this.canvas.offsetWidth;
-                this.h = this.canvas.height = this.canvas.offsetHeight;
-                this.bgCanvas.width = window.innerWidth;
-                this.bgCanvas.height = window.innerHeight;
+                this.w = window.innerWidth;
+                this.h = window.innerHeight;
+                this.bgCanvas.width = this.canvas.width = this.w;
+                this.bgCanvas.height = this.canvas.height = this.h;
             },
 
-            // 绘制背景粒子
+            onClick(e) {
+                const mx = e.clientX, my = e.clientY;
+                // 判定资源收集
+                for(let i = this.orbs.length-1; i>=0; i--) {
+                    const o = this.orbs[i];
+                    const dist = Math.hypot(o.x - mx, o.y - my);
+                    if(dist < o.r + 30) { // 宽松判定
+                        const gain = 10 + (this.upgrades.rate.level * 2);
+                        this.energy += gain;
+                        this.spawnText(o.x, o.y, `+${gain}`, '#00f0ff');
+                        this.spawnExplosion(o.x, o.y, 10, '#00f0ff');
+                        this.orbs.splice(i, 1);
+                        AudioSys.play('collect');
+                        this.updateUI();
+                        return;
+                    }
+                }
+            },
+
+            // --- 升级逻辑 ---
+            upgrade(type) {
+                const u = this.upgrades[type];
+                
+                if(type === 'heal') {
+                    if(this.energy >= u.cost && this.hp < this.maxHp) {
+                        this.energy -= u.cost;
+                        this.hp = Math.min(this.maxHp, this.hp + 30);
+                        u.cost = Math.floor(u.cost * 1.2);
+                        this.spawnText(this.w/2, this.h/2, "REPAIRED", "#00ff00");
+                        this.updateUI();
+                    }
+                    return;
+                }
+
+                if(this.energy >= u.cost && (u.max ? u.level < u.max : true)) {
+                    this.energy -= u.cost;
+                    u.level++;
+                    u.cost = Math.floor(u.cost * 1.5);
+                    this.updateUI();
+                }
+            },
+
+            // --- 主循环 ---
+            loop() {
+                if(!this.running) return;
+                this.frame++;
+                
+                this.drawBg();
+                this.updateLogic();
+                this.drawGame();
+                
+                requestAnimationFrame(() => this.loop());
+            },
+
+            // --- 背景绘制 (动态网格) ---
             drawBg() {
                 const ctx = this.bgCtx;
-                ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-                for(let i=0; i<50; i++) {
-                    const x = (Math.sin(this.frame * 0.001 + i) * 0.5 + 0.5) * window.innerWidth;
-                    const y = (Math.cos(this.frame * 0.002 + i*2) * 0.5 + 0.5) * window.innerHeight;
-                    ctx.fillRect(x, y, 1, 1);
-                }
-            },
-
-            // 绘制核心奇点 (Singularity)
-            drawSingularity() {
-                const ctx = this.ctx;
-                const cx = this.w / 2;
-                const cy = this.h / 2;
-                
-                // 清空并保留拖尾
-                ctx.fillStyle = 'rgba(5, 5, 5, 0.15)';
-                ctx.fillRect(0, 0, this.w, this.h);
-
-                // 核心圆环
+                ctx.clearRect(0,0,this.w,this.h);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
                 ctx.lineWidth = 1;
-                const baseRadius = 100;
-                // 音乐律动影响半径
-                const pulse = this.intensity * 20; 
-
-                // 1. 内部黑洞
-                ctx.beginPath();
-                ctx.arc(cx, cy, baseRadius - 20 + pulse/2, 0, Math.PI*2);
-                ctx.fillStyle = '#000';
-                ctx.fill();
-                ctx.strokeStyle = '#333';
-                ctx.stroke();
-
-                // 2. 旋转的几何环 (Project Echo 风格)
-                ctx.save();
-                ctx.translate(cx, cy);
                 
-                // 环 A
-                ctx.rotate(this.frame * 0.005);
-                ctx.strokeStyle = this.state === 'unstable' ? '#ff2a2a' : 'rgba(255, 255, 255, 0.8)';
-                ctx.beginPath();
-                ctx.arc(0, 0, baseRadius + pulse, 0, Math.PI * 1.5);
-                ctx.stroke();
-
-                // 环 B (反向)
-                ctx.rotate(-this.frame * 0.01);
-                ctx.strokeStyle = this.state === 'unstable' ? 'rgba(255, 0, 0, 0.5)' : 'rgba(0, 240, 255, 0.5)';
-                ctx.beginPath();
-                ctx.arc(0, 0, baseRadius + 40 + pulse, 0, Math.PI);
-                ctx.stroke();
-
-                // 环 C (大虚线)
-                ctx.rotate(this.frame * 0.002);
-                ctx.setLineDash([2, 20]);
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-                ctx.beginPath();
-                ctx.arc(0, 0, baseRadius + 100, 0, Math.PI*2);
-                ctx.stroke();
+                const cx = this.w/2, cy = this.h/2;
+                // 绘制向中心塌陷的网格
+                const time = this.frame * 0.005;
+                const spacing = 50;
                 
-                ctx.restore();
-
-                // 3. 故障扫描线 (当 Unstable 时)
-                if (this.state === 'unstable' && Math.random() > 0.8) {
-                    const y = Math.random() * this.h;
-                    ctx.strokeStyle = '#fff';
-                    ctx.beginPath();
-                    ctx.moveTo(0, y);
-                    ctx.lineTo(this.w, y);
-                    ctx.stroke();
+                // 简单的透视线条
+                ctx.beginPath();
+                for(let x=0; x<=this.w; x+=spacing) {
+                    ctx.moveTo(x, 0); 
+                    // 简单的扭曲效果
+                    const dist = Math.abs(x - cx);
+                    const offset = Math.sin(time + dist*0.01) * 10;
+                    ctx.lineTo(cx + (x-cx)*0.1, cy);
                 }
+                for(let y=0; y<=this.h; y+=spacing) {
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(cx, cy + (y-cy)*0.1);
+                }
+                ctx.stroke();
             },
 
-            loop() {
-                this.frame++;
-                this.drawBg();
-                this.drawSingularity();
-                requestAnimationFrame(() => this.loop());
-            }
-        };
+            // --- 游戏逻辑更新 ---
+            updateLogic() {
+                const cx = this.w/2, cy = this.h/2;
 
-        // --- 2. 氛围音频引擎 (Ethereal Audio) ---
-        const AudioCore = {
-            ctx: null,
-            gainNode: null,
-            analyser: null,
-            
-            init() {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                this.ctx = new AudioContext();
-                this.gainNode = this.ctx.createGain();
-                this.gainNode.gain.value = 0.2;
-                this.analyser = this.ctx.createAnalyser();
-                this.analyser.fftSize = 32;
-                
-                this.gainNode.connect(this.analyser);
-                this.analyser.connect(this.ctx.destination);
-                
-                this.startDrone();
-                this.visualize();
-            },
+                // 1. 生成资源 (漂浮)
+                const rate = Math.max(20, 100 - this.upgrades.rate.level * 5);
+                if(this.frame % rate === 0) {
+                    const pad = 100;
+                    this.orbs.push({
+                        x: pad + Math.random()*(this.w - pad*2),
+                        y: pad + Math.random()*(this.h - pad*2),
+                        vx: (Math.random()-0.5)*0.5,
+                        vy: (Math.random()-0.5)*0.5,
+                        r: 0, maxR: 12, life: 400
+                    });
+                }
 
-            startDrone() {
-                // 创建两个互调的振荡器，产生空灵感
-                const osc1 = this.ctx.createOscillator();
-                const osc2 = this.ctx.createOscillator();
-                
-                osc1.type = 'sine';
-                osc1.frequency.value = 110; // A2
-                
-                osc2.type = 'triangle';
-                osc2.frequency.value = 111; // 轻微失谐产生 Beat
-
-                // LFO 控制音量波动
-                const lfo = this.ctx.createOscillator();
-                lfo.frequency.value = 0.1;
-                const lfoGain = this.ctx.createGain();
-                lfoGain.gain.value = 50;
-                lfo.connect(lfoGain).connect(osc1.frequency);
-
-                osc1.connect(this.gainNode);
-                osc2.connect(this.gainNode);
-                
-                osc1.start();
-                osc2.start();
-                lfo.start();
-            },
-
-            playGlitch() {
-                // 播放尖锐的故障音
-                if (!this.ctx) return;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.1);
-                gain.gain.value = 0.1;
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
-                osc.connect(gain).connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.1);
-            },
-
-            visualize() {
-                const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-                
-                const update = () => {
-                    this.analyser.getByteFrequencyData(dataArray);
-                    // 计算平均音量作为 intensity 传给视觉引擎
-                    let sum = 0;
-                    for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
-                    const avg = sum / dataArray.length;
+                // 2. 生成敌人 (WAVE 机制)
+                const enemyRate = Math.max(30, 120 - this.wave * 8);
+                if(this.frame % enemyRate === 0) {
+                    // 边缘生成
+                    const angle = Math.random() * Math.PI * 2;
+                    const r = Math.max(this.w, this.h) / 1.5;
+                    const ex = cx + Math.cos(angle) * r;
+                    const ey = cy + Math.sin(angle) * r;
                     
-                    EchoVisuals.intensity = avg / 255; // 0.0 - 1.0
-                    
-                    // 更新 UI 波形条
-                    const barContainer = document.getElementById('audio-vis');
-                    barContainer.innerHTML = '';
-                    for(let i=0; i<10; i++) {
-                        const h = (dataArray[i] / 255) * 20;
-                        const bar = document.createElement('div');
-                        bar.className = 'bar';
-                        bar.style.height = Math.max(2, h) + 'px';
-                        barContainer.appendChild(bar);
+                    const hp = 15 + this.wave * 10;
+                    const spd = 0.5 + this.wave * 0.05;
+                    this.enemies.push({ 
+                        x: ex, y: ey, 
+                        hp: hp, maxHp: hp, 
+                        speed: spd, 
+                        radius: 12 + Math.random()*5 
+                    });
+                }
+
+                // WAVE 提升
+                if(this.frame % 1200 === 0) {
+                    this.wave++;
+                    this.spawnText(cx, cy - 100, `WARNING: WAVE ${this.wave}`, '#ff2a2a');
+                }
+
+                // 3. 自动攻击 (主炮)
+                const gunLvl = this.upgrades.gun.level;
+                const fireCd = Math.max(15, 70 - gunLvl * 10);
+                
+                if(this.frame - this.lastFire > fireCd) {
+                    const target = this.getNearestEnemy(cx, cy);
+                    if(target) {
+                        this.lastFire = this.frame;
+                        AudioSys.play('laser');
+                        const angle = Math.atan2(target.y - cy, target.x - cx);
+                        const dmg = 10 + gunLvl * 5;
+                        const spd = 8;
+
+                        // 5级进化逻辑
+                        let shots = [];
+                        if(gunLvl === 1) shots = [0];
+                        else if(gunLvl === 2) shots = [0]; // 射速快
+                        else if(gunLvl === 3) shots = [-0.1, 0.1]; // 双发
+                        else if(gunLvl === 4) shots = [-0.15, 0.15]; // 大双发
+                        else if(gunLvl >= 5) shots = [-0.2, 0, 0.2]; // 三发散射
+
+                        shots.forEach(offset => {
+                            this.bullets.push({
+                                x: cx, y: cy,
+                                vx: Math.cos(angle + offset) * spd,
+                                vy: Math.sin(angle + offset) * spd,
+                                dmg: dmg,
+                                size: gunLvl >= 4 ? 5 : 3,
+                                color: '#bd00ff',
+                                life: 100
+                            });
+                        });
                     }
+                }
 
-                    requestAnimationFrame(update);
-                };
-                update();
-            }
-        };
+                // 4. 浮游炮 (Turrets)
+                const turretCount = this.upgrades.turret.level;
+                const tRadius = 70;
+                if(turretCount > 0 && this.frame % 30 === 0) {
+                    for(let i=0; i<turretCount; i++) {
+                        // 简单的计算炮塔位置
+                        const tAngle = (this.frame * 0.02) + (i * (Math.PI*2/turretCount));
+                        const tx = cx + Math.cos(tAngle) * tRadius;
+                        const ty = cy + Math.sin(tAngle) * tRadius;
+                        
+                        const target = this.getNearestEnemy(tx, ty);
+                        if(target) {
+                            AudioSys.play('turret');
+                            const aim = Math.atan2(target.y - ty, target.x - tx);
+                            this.bullets.push({
+                                x: tx, y: ty,
+                                vx: Math.cos(aim) * 6, vy: Math.sin(aim) * 6,
+                                dmg: 8, size: 2, color: '#ffd700', life: 60
+                            });
+                        }
+                    }
+                }
 
-        // --- 3. 游戏逻辑 ---
-        const Game = {
-            logCount: 0,
-            
-            init() {
-                AudioCore.init();
-                EchoVisuals.init();
-                EchoVisuals.state = 'active';
-                this.addLog("音频核心... [同步完成]", "SYS");
-                this.addLog("视觉矩阵... [在线]", "SYS");
+                // --- 物理更新 ---
                 
-                // 延迟进入第一章
-                setTimeout(() => this.loadScene('start'), 1000);
+                // 资源
+                this.orbs.forEach(o => {
+                    if(o.r < o.maxR) o.r += 0.5;
+                    o.x += o.vx; o.y += o.vy;
+                    o.life--;
+                });
+                this.orbs = this.orbs.filter(o => o.life > 0);
+
+                // 敌人
+                this.enemies.forEach(e => {
+                    const angle = Math.atan2(cy - e.y, cx - e.x);
+                    e.x += Math.cos(angle) * e.speed;
+                    e.y += Math.sin(angle) * e.speed;
+                    
+                    // 撞击核心
+                    if(Math.hypot(cx - e.x, cy - e.y) < 40) {
+                        e.dead = true;
+                        this.hp -= 10;
+                        AudioSys.play('hit');
+                        document.body.classList.add('shake'); // CSS震动
+                        setTimeout(()=>document.body.classList.remove('shake'), 500);
+                        this.spawnExplosion(e.x, e.y, 20, '#ff2a2a');
+                        this.updateUI();
+                        if(this.hp <= 0) this.gameOver();
+                    }
+                });
+
+                // 子弹
+                this.bullets.forEach(b => {
+                    b.x += b.vx; b.y += b.vy; b.life--;
+                    // 碰撞
+                    for(let e of this.enemies) {
+                        if(Math.hypot(b.x - e.x, b.y - e.y) < e.radius + b.size + 5) {
+                            b.life = 0;
+                            e.hp -= b.dmg;
+                            e.hitFlash = 5; // 闪白帧
+                            this.spawnExplosion(b.x, b.y, 3, b.color);
+                            if(e.hp <= 0) {
+                                e.dead = true;
+                                this.spawnExplosion(e.x, e.y, 15, '#ff2a2a');
+                            }
+                            break;
+                        }
+                    }
+                });
+
+                // 粒子
+                this.particles.forEach(p => {
+                    p.x += p.vx; p.y += p.vy; p.life--; p.alpha -= 0.03;
+                });
+
+                // 清理
+                this.enemies = this.enemies.filter(e => !e.dead);
+                this.bullets = this.bullets.filter(b => b.life > 0);
+                this.particles = this.particles.filter(p => p.life > 0);
             },
 
-            addLog(text, sender="DAT") {
-                const feed = document.getElementById('log-feed');
-                const time = new Date().toTimeString().split(' ')[0];
-                
-                const div = document.createElement('div');
-                div.className = 'entry';
-                div.innerHTML = `
-                    <span class="timestamp">${sender} // ${time}</span>
-                    <p>${text}</p>
-                `;
-                feed.appendChild(div);
-                feed.scrollTop = feed.scrollHeight;
-                this.logCount++;
-            },
+            // --- 渲染绘制 ---
+            drawGame() {
+                const ctx = this.ctx;
+                const cx = this.w/2, cy = this.h/2;
+                ctx.clearRect(0,0,this.w,this.h);
 
-            updateButtons(choices) {
-                const panel = document.getElementById('btn-group');
-                panel.innerHTML = ''; // 清空
-                choices.forEach(c => {
-                    const btn = document.createElement('button');
-                    btn.innerHTML = `>> ${c.text}`;
-                    if(c.danger) btn.classList.add('danger');
-                    btn.onclick = () => {
-                        AudioCore.playGlitch();
-                        this.loadScene(c.next);
-                    };
-                    panel.appendChild(btn);
+                // 1. 绘制核心 Qi
+                const hpRatio = this.hp/this.maxHp;
+                const coreColor = hpRatio > 0.5 ? '#00f0ff' : '#ff2a2a';
+                
+                // 外环
+                ctx.strokeStyle = coreColor;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const ringSize = 35 + Math.sin(this.frame*0.05)*2;
+                ctx.arc(cx, cy, ringSize, 0, Math.PI*2);
+                ctx.stroke();
+
+                // 核心实体 (实心黑+发光边)
+                ctx.fillStyle = '#050505';
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = coreColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 30, 0, Math.PI*2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // 核心眼球 (跟踪敌人)
+                const target = this.getNearestEnemy(cx, cy);
+                let eyeAngle = this.frame * 0.02;
+                if(target) eyeAngle = Math.atan2(target.y - cy, target.x - cx);
+                
+                ctx.fillStyle = coreColor;
+                ctx.beginPath();
+                ctx.arc(cx + Math.cos(eyeAngle)*12, cy + Math.sin(eyeAngle)*12, 8, 0, Math.PI*2);
+                ctx.fill();
+
+                // 2. 绘制浮游炮塔
+                const tCount = this.upgrades.turret.level;
+                const tRadius = 70;
+                ctx.fillStyle = '#ffd700';
+                for(let i=0; i<tCount; i++) {
+                    const angle = (this.frame * 0.02) + (i * (Math.PI*2/tCount));
+                    const tx = cx + Math.cos(angle)*tRadius;
+                    const ty = cy + Math.sin(angle)*tRadius;
+                    
+                    ctx.save();
+                    ctx.translate(tx, ty);
+                    ctx.rotate(angle + Math.PI/2); // 朝向外侧
+                    ctx.beginPath();
+                    ctx.moveTo(0, -8); ctx.lineTo(-6, 6); ctx.lineTo(6, 6);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                // 3. 绘制资源 Orbs
+                this.orbs.forEach(o => {
+                    ctx.globalAlpha = o.life < 50 ? o.life/50 : 1;
+                    ctx.fillStyle = 'rgba(0, 240, 255, 0.2)';
+                    ctx.strokeStyle = '#00f0ff';
+                    ctx.shadowBlur = 10; ctx.shadowColor = '#00f0ff';
+                    
+                    ctx.beginPath();
+                    ctx.arc(o.x, o.y, o.r, 0, Math.PI*2);
+                    ctx.fill(); ctx.stroke();
+                    
+                    // 倒计时环
+                    ctx.beginPath();
+                    ctx.arc(o.x, o.y, o.maxR + 4, 0, (o.life/400)*Math.PI*2);
+                    ctx.stroke();
+                    ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+                });
+
+                // 4. 绘制敌人
+                this.enemies.forEach(e => {
+                    ctx.save();
+                    ctx.translate(e.x, e.y);
+                    const angle = Math.atan2(cy - e.y, cx - e.x);
+                    ctx.rotate(angle);
+                    
+                    // 受击闪白
+                    ctx.fillStyle = e.hitFlash > 0 ? '#fff' : '#ff2a2a';
+                    if(e.hitFlash > 0) e.hitFlash--;
+
+                    ctx.shadowBlur = 10; ctx.shadowColor = '#ff2a2a';
+                    ctx.beginPath();
+                    ctx.moveTo(e.radius, 0);
+                    ctx.lineTo(-e.radius, -e.radius/1.5);
+                    ctx.lineTo(-e.radius, e.radius/1.5);
+                    ctx.fill();
+
+                    // 血条
+                    if(e.hp < e.maxHp) {
+                        ctx.fillStyle = '#fff';
+                        ctx.fillRect(-e.radius, -e.radius-8, e.radius*2 * (e.hp/e.maxHp), 2);
+                    }
+                    ctx.restore();
+                });
+
+                // 5. 子弹 (带拖尾)
+                this.bullets.forEach(b => {
+                    ctx.fillStyle = b.color;
+                    ctx.shadowBlur = 5; ctx.shadowColor = b.color;
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, b.size, 0, Math.PI*2);
+                    ctx.fill();
+                    
+                    // 简单的运动模糊拖尾
+                    ctx.strokeStyle = b.color;
+                    ctx.lineWidth = b.size;
+                    ctx.beginPath();
+                    ctx.moveTo(b.x, b.y);
+                    ctx.lineTo(b.x - b.vx*2, b.y - b.vy*2);
+                    ctx.stroke();
+                });
+
+                // 6. 粒子
+                this.particles.forEach(p => {
+                    ctx.globalAlpha = Math.max(0, p.alpha);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(p.x, p.y, 3, 3);
+                    ctx.globalAlpha = 1;
                 });
             },
 
-            loadScene(id) {
-                const scene = script[id];
-                if(scene.visualState) EchoVisuals.state = scene.visualState;
-                
-                this.addLog(scene.text);
-                
-                if(scene.choices) {
-                    this.updateButtons(scene.choices);
+            // --- 辅助功能 ---
+            getNearestEnemy(x, y) {
+                let nearest = null, min = Infinity;
+                for(let e of this.enemies) {
+                    const d = Math.hypot(e.x - x, e.y - y);
+                    if(d < min) { min = d; nearest = e; }
                 }
+                return nearest;
+            },
+
+            spawnExplosion(x, y, count, color) {
+                for(let i=0; i<count; i++) {
+                    this.particles.push({
+                        x, y,
+                        vx: (Math.random()-0.5)*8, vy: (Math.random()-0.5)*8,
+                        life: 30, alpha: 1, color: color
+                    });
+                }
+            },
+
+            spawnText(x, y, text, color) {
+                const el = document.createElement('div');
+                el.className = 'floater';
+                el.style.left = x + 'px'; el.style.top = y + 'px';
+                el.style.color = color;
+                el.innerText = text;
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 800);
+            },
+
+            updateUI() {
+                document.getElementById('energy-display').innerText = Math.floor(this.energy);
+                document.getElementById('wave-display').innerText = this.wave;
+                document.getElementById('hp-bar').style.width = (this.hp/this.maxHp)*100 + '%';
+                document.getElementById('hp-text').innerText = Math.ceil(this.hp);
+
+                // 更新升级菜单文字与状态
+                this.updateCard('gun', '主炮');
+                this.updateCard('turret', '浮游炮');
+                this.updateCard('rate', '采集');
+                this.updateCard('heal', '修复');
+            },
+
+            updateCard(type, name) {
+                const u = this.upgrades[type];
+                const card = document.getElementById('card-'+type);
+                
+                document.getElementById('cost-'+type).innerText = u.cost;
+                if(u.max) document.getElementById('lvl-'+type).innerText = u.level;
+
+                // 动态描述
+                let desc = "";
+                if(type === 'gun') {
+                    if(u.level===1) desc="单发速射";
+                    else if(u.level===2) desc="射速强化";
+                    else if(u.level===3) desc="双发平行";
+                    else if(u.level===4) desc="大口径双发";
+                    else desc="三发广域散射";
+                } else if(type === 'turret') {
+                    desc = `当前部署: ${u.level} 机`;
+                } else if(type === 'rate') {
+                    desc = "资源生成加快";
+                } else {
+                    desc = "核心紧急修复";
+                }
+                if(type !== 'heal' && type !== 'rate') document.getElementById('desc-'+type).innerText = desc;
+
+                // 禁用状态
+                if(this.energy < u.cost || (u.max && u.level >= u.max)) {
+                    card.classList.add('disabled');
+                } else {
+                    card.classList.remove('disabled');
+                }
+            },
+
+            gameOver() {
+                this.running = false;
+                alert(`CORE DESTROYED // 核心损毁\nWAVES SURVIVED: ${this.wave}`);
+                location.reload();
             }
         };
-
-        // --- 剧本 ---
-        const script = {
-            'start': {
-                text: "收到异常信号。<br>来源：奇点观测站 [Echo]。<br>信号包含大量加密数据，建议谨慎解码。",
-                visualState: 'active',
-                choices: [
-                    { text: "开始解码数据流", next: 'decode_1' },
-                    { text: "扫描异常波段", next: 'scan' }
-                ]
-            },
-            'decode_1': {
-                text: "解码中...<br>解析出一段语音：<br>“...不要看...<span class='redacted'>眼睛</span>...它在看着你...”",
-                visualState: 'active',
-                choices: [
-                    { text: "追踪信号源", next: 'trace' },
-                    { text: "中断连接", next: 'disconnect' }
-                ]
-            },
-            'scan': {
-                text: "扫描完成。<br>警告：检测到 <span class='glitch-text'>高维干涉</span>。<br>共振率上升至 40%。",
-                visualState: 'unstable',
-                choices: [
-                    { text: "尝试稳定力场", next: 'stabilize' },
-                    { text: "记录波形并撤退", next: 'disconnect' }
-                ]
-            },
-            'trace': {
-                text: "追踪成功。<br>坐标指向...你的位置。<br>它就在屏幕后面。",
-                visualState: 'unstable',
-                choices: [
-                    { text: "回头看 (危险)", next: 'end_death', danger: true },
-                    { text: "强制关机", next: 'end_safe' }
-                ]
-            },
-            'stabilize': {
-                text: "力场稳定失败。<br>奇点正在扩张。<br>系统即将崩溃...",
-                visualState: 'unstable',
-                choices: [
-                    { text: "上传意识", next: 'end_upload', danger: true }
-                ]
-            },
-            'disconnect': {
-                text: "连接中断。<br>你逃过了一劫，但这只是暂时的。<br>Echo 永远在监听。",
-                visualState: 'idle',
-                choices: [
-                    { text: "重置终端", next: 'start' }
-                ]
-            },
-            'end_death': {
-                text: "信号丢失... <br>SUBJECT_LOST.",
-                visualState: 'unstable',
-                choices: [ { text: "重启", next: 'start' } ]
-            },
-            'end_upload': {
-                text: "意识上传完成。<br>你已成为 Echo 的一部分。",
-                visualState: 'active',
-                choices: [ { text: "...", next: 'start' } ]
-            },
-            'end_safe': {
-                text: "系统已关闭。<br>晚安，操作员。",
-                visualState: 'idle',
-                choices: [ { text: "重启", next: 'start' } ]
-            }
-        };
-
-        // 启动背景动画
-        EchoVisuals.init();
 
     </script>
 </body>
