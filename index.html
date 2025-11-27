@@ -1,537 +1,602 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CYBER_CULTIVATION // SYSTEM_V3</title>
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    <title>PROJECT_ECHO // LOG_ENTRY</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* 磁带未来主义配色：琥珀色 (Amber) */
-            --bg-color: #050505;
-            --panel-bg: #111;
-            --amber-bright: #ffb000; 
-            --amber-dim: #594000;
-            --amber-dark: #221800;
-            --alert-red: #ff3300;
+            /* 奇点风格配色：冷白、深渊黑、警报红 */
+            --bg-deep: #050505;
+            --ui-white: #e0e0e0;
+            --ui-dim: #4a4a4a;
+            --accent-cyan: #00f0ff;
+            --accent-red: #ff2a2a;
             
-            --font-ui: 'Share Tech Mono', monospace;
-            --font-text: 'ZCOOL KuaiLe', monospace;
+            --font-head: 'Orbitron', sans-serif;
+            --font-body: 'Rajdhani', sans-serif;
         }
 
         * { box-sizing: border-box; }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--amber-bright);
-            font-family: var(--font-ui);
             margin: 0;
+            background-color: var(--bg-deep);
+            color: var(--ui-white);
+            font-family: var(--font-body);
             height: 100vh;
             overflow: hidden;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
         }
 
-        /* 全屏 CRT 扫描线特效 */
-        body::after {
-            content: "";
+        /* 背景：动态星尘/网格 */
+        #bg-canvas {
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 4px, 6px 100%;
-            pointer-events: none;
-            z-index: 999;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            opacity: 0.3;
         }
 
-        /* --- 顶部状态栏 --- */
-        header {
-            height: 40px;
-            background: var(--amber-dark);
-            border-bottom: 2px solid var(--amber-dim);
+        /* --- 主界面容器 (悬浮玻璃风格) --- */
+        #interface-container {
+            position: relative;
+            z-index: 10;
+            width: 1200px;
+            max-width: 95vw;
+            height: 800px;
+            max-height: 90vh;
+            display: flex;
+            background: rgba(10, 10, 10, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* 左侧：奇点观测窗 (70%) */
+        #visual-sector {
+            flex: 7;
+            position: relative;
+            overflow: hidden;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* 核心视觉 Canvas */
+        #echo-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 视觉覆盖层 UI */
+        .overlay-ui {
+            position: absolute;
+            pointer-events: none;
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: rgba(255,255,255,0.5);
+        }
+        .tl { top: 20px; left: 20px; }
+        .br { bottom: 20px; right: 20px; text-align: right; }
+        
+        .status-badge {
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 2px 6px;
+            font-size: 9px;
+            margin-right: 10px;
+        }
+
+        /* 右侧：数据日志 (30%) */
+        #log-sector {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            background: rgba(0,0,0,0.5);
+        }
+
+        #log-header {
+            height: 60px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
             display: flex;
             align-items: center;
             padding: 0 20px;
             justify-content: space-between;
+        }
+
+        h1 {
+            font-family: var(--font-head);
             font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            margin: 0;
+            letter-spacing: 3px;
         }
 
-        /* --- 主界面布局 (左右分栏) --- */
-        #main-console {
+        /* 滚动日志区 */
+        #log-feed {
             flex: 1;
-            display: flex;
-            height: calc(100vh - 40px);
-        }
-
-        /* 左侧：视觉监视器 (Visual Monitor) */
-        #monitor-sector {
-            flex: 6; /* 占据 60% 宽度 */
-            position: relative;
-            border-right: 3px solid var(--amber-dim);
-            background: radial-gradient(circle at 50% 50%, #1a1200 0%, #000 120%);
-            display: flex;
-            flex-direction: column;
-        }
-
-        #monitor-label {
-            position: absolute;
-            top: 10px; left: 10px;
-            background: var(--amber-bright);
-            color: #000;
-            padding: 2px 8px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        /* 画布自动填充左侧 */
-        canvas {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            filter: blur(0.5px) contrast(1.2);
-        }
-
-        /* 右侧：数据与控制 (Data & Control) */
-        #control-sector {
-            flex: 4; /* 占据 40% 宽度 */
-            display: flex;
-            flex-direction: column;
             padding: 20px;
-            background: #0a0a0a;
-            box-shadow: inset 10px 0 20px rgba(0,0,0,0.5);
-        }
-
-        /* 剧情文本区 */
-        #log-display {
-            flex: 1;
-            border: 1px solid var(--amber-dim);
-            background: rgba(0,0,0,0.3);
-            padding: 15px;
-            font-family: var(--font-text);
-            font-size: 1.3rem;
-            line-height: 1.6;
             overflow-y: auto;
-            color: #ddd;
-            text-shadow: 0 0 5px var(--amber-dim);
-            margin-bottom: 20px;
+            font-size: 16px;
+            line-height: 1.6;
         }
-        
-        #log-display::-webkit-scrollbar { width: 5px; }
-        #log-display::-webkit-scrollbar-thumb { background: var(--amber-dim); }
 
-        .highlight { color: var(--amber-bright); font-weight: bold; text-decoration: underline; }
-        .glitch { animation: glitch 0.3s infinite; color: var(--alert-red); display: inline-block; }
-        @keyframes glitch { 0% { transform: translate(1px,0); } 50% { transform: translate(-1px,0); } 100% { transform: translate(0,0); } }
+        /* 隐藏滚动条但保留功能 */
+        #log-feed::-webkit-scrollbar { width: 2px; }
+        #log-feed::-webkit-scrollbar-thumb { background: var(--ui-dim); }
 
-        /* 互动按钮区 */
-        #action-panel {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+        .entry {
+            margin-bottom: 25px;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+            border-left: 1px solid var(--ui-dim);
+            padding-left: 15px;
+        }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        .timestamp {
+            font-size: 10px;
+            color: var(--ui-dim);
+            display: block;
+            margin-bottom: 5px;
+            font-family: var(--font-head);
+        }
+
+        .redacted {
+            background: var(--ui-white);
+            color: var(--ui-white);
+            padding: 0 2px;
+            cursor: help;
+        }
+        .redacted:hover {
+            background: transparent;
+            color: var(--ui-white);
+        }
+
+        /* 交互区域 */
+        #interaction-panel {
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
             gap: 10px;
-            margin-bottom: 20px;
         }
 
+        /* 极简按钮 */
         button {
             background: transparent;
-            border: 2px solid var(--amber-dim);
-            color: var(--amber-bright);
-            padding: 15px;
-            font-family: var(--font-ui);
-            font-size: 1rem;
-            text-transform: uppercase;
+            border: 1px solid var(--ui-dim);
+            color: var(--ui-white);
+            padding: 12px;
+            font-family: var(--font-head);
+            font-size: 10px;
+            letter-spacing: 2px;
             cursor: pointer;
-            transition: 0.2s;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
             text-align: left;
             position: relative;
+            overflow: hidden;
         }
-        
+
         button:hover {
-            background: var(--amber-bright);
-            color: #000;
-            box-shadow: 0 0 15px var(--amber-bright);
+            border-color: var(--accent-cyan);
+            background: rgba(0, 240, 255, 0.05);
+            padding-left: 20px;
         }
 
-        button:active { transform: translateY(2px); }
+        button::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 0%; height: 100%;
+            background: var(--accent-cyan);
+            transition: width 0.3s;
+            z-index: -1;
+            opacity: 0.1;
+        }
+        button:hover::after { width: 100%; }
 
-        button.locked { opacity: 0.5; border-style: dashed; cursor: not-allowed; }
+        button.danger:hover {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
 
-        /* 底部：磁带播放器 UI */
-        #tape-deck {
-            border-top: 2px dashed var(--amber-dim);
-            padding-top: 15px;
+        /* 音频波形条 */
+        #audio-vis {
+            height: 2px;
+            width: 100%;
+            background: transparent;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            font-size: 0.8rem;
-        }
-
-        .tape-controls button {
-            padding: 5px 10px;
-            font-size: 0.8rem;
-            width: auto;
-            display: inline-block;
-        }
-
-        #audio-visualizer {
-            display: flex;
+            justify-content: center;
             gap: 2px;
-            height: 20px;
-            align-items: flex-end;
+            margin-top: 10px;
+            opacity: 0.3;
         }
-        .bar { width: 4px; background: var(--amber-bright); animation: bounce 0.5s infinite; }
-        @keyframes bounce { 0%, 100% { height: 2px; } 50% { height: 15px; } }
+        .bar { width: 2px; background: white; height: 2px; }
+
+        /* 故障特效类 */
+        .glitch-text {
+            animation: text-glitch 2s infinite;
+        }
+        @keyframes text-glitch {
+            0% { transform: translate(0); }
+            2% { transform: translate(-2px, 1px); }
+            4% { transform: translate(2px, -1px); }
+            6% { transform: translate(0); }
+            100% { transform: translate(0); }
+        }
 
     </style>
 </head>
 <body>
 
-    <header>
-        <span>SYS.DATE: 9999.12.31</span>
-        <span>UNIT: 302-B</span>
-        <span class="blink">STATUS: UNSTABLE</span>
-    </header>
+    <canvas id="bg-canvas"></canvas>
 
-    <div id="main-console">
-        <div id="monitor-sector">
-            <div id="monitor-label">CAM_01 // LIVE FEED</div>
-            <canvas id="game-canvas"></canvas>
+    <div id="interface-container">
+        
+        <div id="visual-sector">
+            <div class="overlay-ui tl">
+                <span class="status-badge">ONLINE</span>
+                <span>OBSERVATION_DECK_04</span>
+            </div>
+            <div class="overlay-ui br">
+                <div>ECHO_RESONANCE: <span id="res-val">0.00%</span></div>
+                <div>COORDINATES: NULL</div>
+            </div>
+            
+            <canvas id="echo-canvas"></canvas>
         </div>
 
-        <div id="control-sector">
-            <div style="margin-bottom: 10px; color: var(--amber-dim);">>> SYSTEM LOG:</div>
-            
-            <div id="log-display">
-                <p>正在连接神经接口...</p>
-                <p>等待操作员指令。</p>
+        <div id="log-sector">
+            <div id="log-header">
+                <h1>PROJECT_ECHO</h1>
+                <div style="font-size: 10px; color:#666;">LOG_ID: #9921</div>
             </div>
 
-            <div id="action-panel">
+            <div id="log-feed">
+                <div class="entry">
+                    <span class="timestamp">SYS.INIT // 00:00:00</span>
+                    <p>连接建立。<br>神经同步率稳定。<br>等待音频引擎启动...</p>
                 </div>
+            </div>
 
-            <div id="tape-deck">
-                <div style="display:flex; flex-direction:column;">
-                    <span>BGM: <span id="bgm-status">OFFLINE</span></span>
-                    <div id="audio-visualizer" style="opacity:0;">
-                        <div class="bar" style="animation-duration:0.4s"></div>
-                        <div class="bar" style="animation-duration:0.6s"></div>
-                        <div class="bar" style="animation-duration:0.3s"></div>
-                        <div class="bar" style="animation-duration:0.5s"></div>
+            <div id="interaction-panel">
+                <div id="audio-vis">
                     </div>
-                </div>
-                <div class="tape-controls">
-                    <button id="btn-audio" onclick="AudioSys.toggle()">[INSERT TAPE]</button>
+                <div id="btn-group" style="display:flex; flex-direction:column; gap:8px;">
+                    <button id="start-btn" onclick="Game.init()">[ INITIALIZE LINK ]</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- 1. 程序化绘图引擎 (No Images Needed!) ---
-        const ArtSys = {
-            canvas: document.getElementById('game-canvas'),
-            ctx: null,
-            sceneType: 'static', // static, doctor, corridor, monster
+        // --- 1. ECHO 视觉引擎 (数学几何艺术) ---
+        const EchoVisuals = {
+            canvas: document.getElementById('echo-canvas'),
+            bgCanvas: document.getElementById('bg-canvas'),
+            ctx: null, bgCtx: null,
+            w: 0, h: 0,
+            frame: 0,
+            intensity: 0, // 随音乐律动
+            state: 'idle', // idle, active, unstable
 
             init() {
                 this.ctx = this.canvas.getContext('2d');
-                window.addEventListener('resize', () => this.resize());
+                this.bgCtx = this.bgCanvas.getContext('2d');
                 this.resize();
+                window.addEventListener('resize', () => this.resize());
                 this.loop();
             },
 
             resize() {
-                this.canvas.width = this.canvas.parentElement.clientWidth;
-                this.canvas.height = this.canvas.parentElement.clientHeight;
+                this.w = this.canvas.width = this.canvas.offsetWidth;
+                this.h = this.canvas.height = this.canvas.offsetHeight;
+                this.bgCanvas.width = window.innerWidth;
+                this.bgCanvas.height = window.innerHeight;
             },
 
-            drawGrid(ctx, w, h) {
-                // 绘制透视网格 (Retro Grid)
-                ctx.strokeStyle = 'rgba(255, 176, 0, 0.2)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                // 地面线
-                for(let i=0; i<w; i+=80) {
-                    ctx.moveTo(i, h/2); ctx.lineTo(i-w/2, h);
-                }
-                // 横线
-                for(let j=h/2; j<h; j+=40) {
-                    ctx.moveTo(0, j); ctx.lineTo(w, j);
-                }
-                ctx.stroke();
-            },
-
-            drawDoctor(ctx, w, h) {
-                // 用简单的几何图形画一个诡异的医生
-                ctx.strokeStyle = '#ffb000';
-                ctx.lineWidth = 3;
-                
-                const cx = w/2;
-                const cy = h/2 + 50;
-
-                // 头 (方形)
-                ctx.strokeRect(cx - 40, cy - 150, 80, 80);
-                // 眼睛 (X)
-                ctx.beginPath();
-                ctx.moveTo(cx-20, cy-130); ctx.lineTo(cx-10, cy-120);
-                ctx.moveTo(cx-10, cy-130); ctx.lineTo(cx-20, cy-120);
-                ctx.moveTo(cx+20, cy-130); ctx.lineTo(cx+30, cy-120);
-                ctx.moveTo(cx+30, cy-130); ctx.lineTo(cx+20, cy-120);
-                ctx.stroke();
-
-                // 身体 (大褂)
-                ctx.beginPath();
-                ctx.moveTo(cx, cy-70);
-                ctx.lineTo(cx-60, cy+100);
-                ctx.lineTo(cx+60, cy+100);
-                ctx.lineTo(cx, cy-70);
-                ctx.stroke();
-
-                // 手里的电锯 (矩形+锯齿)
-                ctx.fillStyle = '#ff3300';
-                ctx.fillRect(cx+60, cy-20, 100, 30);
-                ctx.fillStyle = '#ffb000';
-            },
-
-            drawMonster(ctx, w, h) {
-                // 乱码风格的怪物
-                const cx = w/2;
-                const cy = h/2;
-                ctx.strokeStyle = '#ff3300';
-                ctx.beginPath();
+            // 绘制背景粒子
+            drawBg() {
+                const ctx = this.bgCtx;
+                ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
                 for(let i=0; i<50; i++) {
-                    ctx.moveTo(cx, cy);
-                    ctx.lineTo(cx + Math.random()*200 - 100, cy + Math.random()*200 - 100);
+                    const x = (Math.sin(this.frame * 0.001 + i) * 0.5 + 0.5) * window.innerWidth;
+                    const y = (Math.cos(this.frame * 0.002 + i*2) * 0.5 + 0.5) * window.innerHeight;
+                    ctx.fillRect(x, y, 1, 1);
                 }
+            },
+
+            // 绘制核心奇点 (Singularity)
+            drawSingularity() {
+                const ctx = this.ctx;
+                const cx = this.w / 2;
+                const cy = this.h / 2;
+                
+                // 清空并保留拖尾
+                ctx.fillStyle = 'rgba(5, 5, 5, 0.15)';
+                ctx.fillRect(0, 0, this.w, this.h);
+
+                // 核心圆环
+                ctx.lineWidth = 1;
+                const baseRadius = 100;
+                // 音乐律动影响半径
+                const pulse = this.intensity * 20; 
+
+                // 1. 内部黑洞
+                ctx.beginPath();
+                ctx.arc(cx, cy, baseRadius - 20 + pulse/2, 0, Math.PI*2);
+                ctx.fillStyle = '#000';
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.stroke();
+
+                // 2. 旋转的几何环 (Project Echo 风格)
+                ctx.save();
+                ctx.translate(cx, cy);
+                
+                // 环 A
+                ctx.rotate(this.frame * 0.005);
+                ctx.strokeStyle = this.state === 'unstable' ? '#ff2a2a' : 'rgba(255, 255, 255, 0.8)';
+                ctx.beginPath();
+                ctx.arc(0, 0, baseRadius + pulse, 0, Math.PI * 1.5);
+                ctx.stroke();
+
+                // 环 B (反向)
+                ctx.rotate(-this.frame * 0.01);
+                ctx.strokeStyle = this.state === 'unstable' ? 'rgba(255, 0, 0, 0.5)' : 'rgba(0, 240, 255, 0.5)';
+                ctx.beginPath();
+                ctx.arc(0, 0, baseRadius + 40 + pulse, 0, Math.PI);
+                ctx.stroke();
+
+                // 环 C (大虚线)
+                ctx.rotate(this.frame * 0.002);
+                ctx.setLineDash([2, 20]);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.beginPath();
+                ctx.arc(0, 0, baseRadius + 100, 0, Math.PI*2);
                 ctx.stroke();
                 
-                // 大眼睛
-                ctx.beginPath();
-                ctx.arc(cx, cy, 30, 0, Math.PI*2);
-                ctx.fillStyle = '#ff3300';
-                ctx.fill();
+                ctx.restore();
+
+                // 3. 故障扫描线 (当 Unstable 时)
+                if (this.state === 'unstable' && Math.random() > 0.8) {
+                    const y = Math.random() * this.h;
+                    ctx.strokeStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(this.w, y);
+                    ctx.stroke();
+                }
             },
 
             loop() {
-                const ctx = this.ctx;
-                const w = this.canvas.width;
-                const h = this.canvas.height;
-                const time = Date.now() * 0.002;
-
-                // 清屏 (带残影)
-                ctx.fillStyle = 'rgba(5, 5, 5, 0.2)';
-                ctx.fillRect(0, 0, w, h);
-
-                // 绘制背景网格
-                this.drawGrid(ctx, w, h);
-
-                // 根据场景绘制物体
-                if (this.sceneType === 'doctor') {
-                    this.drawDoctor(ctx, w, h);
-                } else if (this.sceneType === 'monster') {
-                    this.drawMonster(ctx, w, h);
-                } else if (this.sceneType === 'static') {
-                    // 雪花噪点
-                    ctx.fillStyle = '#ffb000';
-                    for(let i=0; i<100; i++) {
-                        ctx.fillRect(Math.random()*w, Math.random()*h, 2, 2);
-                    }
-                }
-
+                this.frame++;
+                this.drawBg();
+                this.drawSingularity();
                 requestAnimationFrame(() => this.loop());
             }
         };
 
-        // --- 2. 磁带音频系统 (Audio System) ---
-        const AudioSys = {
+        // --- 2. 氛围音频引擎 (Ethereal Audio) ---
+        const AudioCore = {
             ctx: null,
-            isPlaying: false,
-            osc: null,
+            gainNode: null,
+            analyser: null,
             
-            toggle() {
-                if (!this.isPlaying) {
-                    this.play();
-                } else {
-                    this.stop();
-                }
+            init() {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+                this.gainNode = this.ctx.createGain();
+                this.gainNode.gain.value = 0.2;
+                this.analyser = this.ctx.createAnalyser();
+                this.analyser.fftSize = 32;
+                
+                this.gainNode.connect(this.analyser);
+                this.analyser.connect(this.ctx.destination);
+                
+                this.startDrone();
+                this.visualize();
             },
 
-            play() {
-                // 初始化 AudioContext
-                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            startDrone() {
+                // 创建两个互调的振荡器，产生空灵感
+                const osc1 = this.ctx.createOscillator();
+                const osc2 = this.ctx.createOscillator();
                 
-                // 创建低频嗡嗡声 (Drone)
-                this.osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.value = 110; // A2
                 
-                this.osc.type = 'sawtooth';
-                this.osc.frequency.setValueAtTime(50, this.ctx.currentTime); // 50Hz 底噪
+                osc2.type = 'triangle';
+                osc2.frequency.value = 111; // 轻微失谐产生 Beat
+
+                // LFO 控制音量波动
+                const lfo = this.ctx.createOscillator();
+                lfo.frequency.value = 0.1;
+                const lfoGain = this.ctx.createGain();
+                lfoGain.gain.value = 50;
+                lfo.connect(lfoGain).connect(osc1.frequency);
+
+                osc1.connect(this.gainNode);
+                osc2.connect(this.gainNode);
                 
-                // 低通滤波，让声音听起来像隔着墙
-                const filter = this.ctx.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.value = 200;
-
-                gain.gain.value = 0.1; // 音量
-
-                this.osc.connect(filter);
-                filter.connect(gain);
-                gain.connect(this.ctx.destination);
-                this.osc.start();
-
-                this.isPlaying = true;
-                document.getElementById('bgm-status').innerText = "PLAYING >>";
-                document.getElementById('btn-audio').innerText = "[EJECT TAPE]";
-                document.getElementById('audio-visualizer').style.opacity = 1;
+                osc1.start();
+                osc2.start();
+                lfo.start();
             },
 
-            stop() {
-                if(this.osc) {
-                    this.osc.stop();
-                    this.osc = null;
-                }
-                this.isPlaying = false;
-                document.getElementById('bgm-status').innerText = "PAUSED ||";
-                document.getElementById('btn-audio').innerText = "[RESUME]";
-                document.getElementById('audio-visualizer').style.opacity = 0;
-            },
-
-            playClick() {
-                // 按钮点击音效
+            playGlitch() {
+                // 播放尖锐的故障音
                 if (!this.ctx) return;
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
-                osc.type = 'square';
-                osc.frequency.value = 800;
-                gain.gain.value = 0.05;
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.1);
+                gain.gain.value = 0.1;
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain).connect(this.ctx.destination);
                 osc.start();
-                osc.stop(this.ctx.currentTime + 0.05);
+                osc.stop(this.ctx.currentTime + 0.1);
+            },
+
+            visualize() {
+                const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+                
+                const update = () => {
+                    this.analyser.getByteFrequencyData(dataArray);
+                    // 计算平均音量作为 intensity 传给视觉引擎
+                    let sum = 0;
+                    for(let i=0; i<dataArray.length; i++) sum += dataArray[i];
+                    const avg = sum / dataArray.length;
+                    
+                    EchoVisuals.intensity = avg / 255; // 0.0 - 1.0
+                    
+                    // 更新 UI 波形条
+                    const barContainer = document.getElementById('audio-vis');
+                    barContainer.innerHTML = '';
+                    for(let i=0; i<10; i++) {
+                        const h = (dataArray[i] / 255) * 20;
+                        const bar = document.createElement('div');
+                        bar.className = 'bar';
+                        bar.style.height = Math.max(2, h) + 'px';
+                        barContainer.appendChild(bar);
+                    }
+
+                    requestAnimationFrame(update);
+                };
+                update();
             }
         };
 
-        // --- 3. 游戏剧情逻辑 ---
+        // --- 3. 游戏逻辑 ---
         const Game = {
-            san: 100,
-            inventory: [],
+            logCount: 0,
             
-            start() {
-                ArtSys.init();
-                this.loadScene('intro');
+            init() {
+                AudioCore.init();
+                EchoVisuals.init();
+                EchoVisuals.state = 'active';
+                this.addLog("音频核心... [同步完成]", "SYS");
+                this.addLog("视觉矩阵... [在线]", "SYS");
+                
+                // 延迟进入第一章
+                setTimeout(() => this.loadScene('start'), 1000);
             },
 
-            loadScene(id) {
-                const scene = scenes[id];
-                const log = document.getElementById('log-display');
-                const panel = document.getElementById('action-panel');
+            addLog(text, sender="DAT") {
+                const feed = document.getElementById('log-feed');
+                const time = new Date().toTimeString().split(' ')[0];
+                
+                const div = document.createElement('div');
+                div.className = 'entry';
+                div.innerHTML = `
+                    <span class="timestamp">${sender} // ${time}</span>
+                    <p>${text}</p>
+                `;
+                feed.appendChild(div);
+                feed.scrollTop = feed.scrollHeight;
+                this.logCount++;
+            },
 
-                // 1. 切换视觉
-                ArtSys.sceneType = scene.visual || 'static';
-
-                // 2. 更新文本 (追加模式)
-                log.innerHTML += `<div style="margin-top:20px; border-top:1px dashed #333; padding-top:10px;">${scene.text}</div>`;
-                log.scrollTop = log.scrollHeight; // 自动滚动到底部
-
-                // 3. 生成按钮
-                panel.innerHTML = '';
-                scene.choices.forEach(c => {
+            updateButtons(choices) {
+                const panel = document.getElementById('btn-group');
+                panel.innerHTML = ''; // 清空
+                choices.forEach(c => {
                     const btn = document.createElement('button');
-                    btn.innerHTML = `> ${c.text}`;
-                    
-                    // 检查条件
-                    if (c.cond && !c.cond()) {
-                        btn.classList.add('locked');
-                        btn.innerHTML += " [条件不足]";
-                        btn.disabled = true;
-                    }
-
+                    btn.innerHTML = `>> ${c.text}`;
+                    if(c.danger) btn.classList.add('danger');
                     btn.onclick = () => {
-                        AudioSys.playClick();
-                        if (c.effect) c.effect(); // 执行副作用（扣血、拿道具）
+                        AudioCore.playGlitch();
                         this.loadScene(c.next);
                     };
                     panel.appendChild(btn);
                 });
+            },
+
+            loadScene(id) {
+                const scene = script[id];
+                if(scene.visualState) EchoVisuals.state = scene.visualState;
+                
+                this.addLog(scene.text);
+                
+                if(scene.choices) {
+                    this.updateButtons(scene.choices);
+                }
             }
         };
 
-        // --- 剧本数据 ---
-        const scenes = {
-            'intro': {
-                text: "系统启动... 日期 9999.12.31。<br>你醒了。这里是第4号手术室。<br><br>左侧检测到威胁：<span class='highlight'>[主治医师]</span>。<br>他手里拿着一颗正在跳动的<span class='glitch'>[眼球]</span>，并称之为‘金丹’。",
-                visual: 'doctor',
+        // --- 剧本 ---
+        const script = {
+            'start': {
+                text: "收到异常信号。<br>来源：奇点观测站 [Echo]。<br>信号包含大量加密数据，建议谨慎解码。",
+                visualState: 'active',
                 choices: [
-                    { text: "大声呼救", next: 'scream' },
-                    { text: "询问保修期 (幽默)", next: 'humor' },
-                    { text: "分析物体结构 (SAN -20)", next: 'analyze' }
+                    { text: "开始解码数据流", next: 'decode_1' },
+                    { text: "扫描异常波段", next: 'scan' }
                 ]
             },
-            'scream': {
-                text: "警告：心率过载！<br>医生叹了口气：“又是废品。”<br>视线变黑...<br>BAD END: 废弃处理。",
-                visual: 'static',
+            'decode_1': {
+                text: "解码中...<br>解析出一段语音：<br>“...不要看...<span class='redacted'>眼睛</span>...它在看着你...”",
+                visualState: 'active',
                 choices: [
-                    { text: "重启系统", next: 'intro' }
+                    { text: "追踪信号源", next: 'trace' },
+                    { text: "中断连接", next: 'disconnect' }
                 ]
             },
-            'humor': {
-                text: "你激活了[认知滤网]。<br>医生变成了一只泰迪熊。<br>你吞下了‘荔枝味’的金丹。<br>状态：存活。",
-                visual: 'static',
-                effect: () => { Game.san -= 10; },
+            'scan': {
+                text: "扫描完成。<br>警告：检测到 <span class='glitch-text'>高维干涉</span>。<br>共振率上升至 40%。",
+                visualState: 'unstable',
                 choices: [
-                    { text: "走出手术室", next: 'corridor' }
+                    { text: "尝试稳定力场", next: 'stabilize' },
+                    { text: "记录波形并撤退", next: 'disconnect' }
                 ]
             },
-            'analyze': {
-                text: "分析完成。<br>解析到摩尔斯电码：'CUT THE RED WIRE'。<br>你发现医生手腕上有一根裸露的红线。",
-                visual: 'doctor',
-                effect: () => { Game.san -= 20; },
+            'trace': {
+                text: "追踪成功。<br>坐标指向...你的位置。<br>它就在屏幕后面。",
+                visualState: 'unstable',
                 choices: [
-                    { text: "切断红线", next: 'win_fight' },
-                    { text: "我不敢...", next: 'scream' }
+                    { text: "回头看 (危险)", next: 'end_death', danger: true },
+                    { text: "强制关机", next: 'end_safe' }
                 ]
             },
-            'win_fight': {
-                text: "目标解体。<br>获得物品：<span class='highlight'>[真视之眼]</span>。<br>你现在的视界不同了。",
-                visual: 'static',
-                effect: () => { Game.inventory.push('eye'); },
+            'stabilize': {
+                text: "力场稳定失败。<br>奇点正在扩张。<br>系统即将崩溃...",
+                visualState: 'unstable',
                 choices: [
-                    { text: "离开房间", next: 'corridor' }
+                    { text: "上传意识", next: 'end_upload', danger: true }
                 ]
             },
-            'corridor': {
-                text: "走廊里弥漫着消毒水和机油的味道。<br>前方有一道视网膜扫描门。",
-                visual: 'static',
+            'disconnect': {
+                text: "连接中断。<br>你逃过了一劫，但这只是暂时的。<br>Echo 永远在监听。",
+                visualState: 'idle',
                 choices: [
-                    { 
-                        text: "使用[真视之眼]开门", 
-                        next: 'secret',
-                        cond: () => Game.inventory.includes('eye')
-                    },
-                    { text: "强行撞门", next: 'scream' },
-                    { text: "在地上爬行 (装疯)", next: 'crawl' }
+                    { text: "重置终端", next: 'start' }
                 ]
             },
-            'crawl': {
-                text: "你像虫子一样爬过了安检。<br>虽然丢人，但有效。<br>SAN值大幅下降。",
-                visual: 'monster',
-                effect: () => { Game.san -= 50; },
-                choices: [
-                    { text: "继续前进", next: 'secret' }
-                ]
+            'end_death': {
+                text: "信号丢失... <br>SUBJECT_LOST.",
+                visualState: 'unstable',
+                choices: [ { text: "重启", next: 'start' } ]
             },
-            'secret': {
-                text: "你进入了核心机房。<br>恭喜，你是第9999个到达这里的‘病人’。<br>（演示结束，等待更新）",
-                visual: 'static',
-                choices: [
-                    { text: "重置模拟", next: 'intro' }
-                ]
+            'end_upload': {
+                text: "意识上传完成。<br>你已成为 Echo 的一部分。",
+                visualState: 'active',
+                choices: [ { text: "...", next: 'start' } ]
+            },
+            'end_safe': {
+                text: "系统已关闭。<br>晚安，操作员。",
+                visualState: 'idle',
+                choices: [ { text: "重启", next: 'start' } ]
             }
         };
 
-        // 启动
-        Game.start();
+        // 启动背景动画
+        EchoVisuals.init();
 
     </script>
 </body>
